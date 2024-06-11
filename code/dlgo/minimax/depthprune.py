@@ -1,6 +1,6 @@
 import random
 
-from dlgo.agent.base import Agent
+from dlgo.agent import Agent
 from dlgo.scoring import GameResult
 
 from dlgo.gotypes import Point, Player
