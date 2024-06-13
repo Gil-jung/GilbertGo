@@ -3,55 +3,29 @@ from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Adam
+from torch.optim import SGD
 from torch.utils.data import DataLoader
 
 from torchvision.datasets import MNIST
 from torchvision.transforms import Compose, ToTensor
 
 import numpy as np
-import matplotlib.pyplot as plt
-import PIL
 
 
 class MNISTDNN(nn.Module):
     def __init__(self, IMG_SIZE=28):
         super(MNISTDNN, self).__init__()
-        self.fc1 = nn.Linear(IMG_SIZE*IMG_SIZE, 32)
-        self.BN1 = nn.BatchNorm1d(32)
-        self.fc2 = nn.Linear(32, 10)
+        self.fc1 = nn.Linear(IMG_SIZE*IMG_SIZE, 392)
+        self.fc2 = nn.Linear(392, 196)
+        self.fc3 = nn.Linear(196, 10)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = F.relu(x)
-        x = self.BN1(x)
+        x = F.sigmoid(x)
         x = self.fc2(x)
-        x = torch.softmax(x, dim=-1)
-        return x
-
-
-class MNISTCNN(nn.Module):
-    def __init__(self, IMG_SIZE=28):
-        super(MNISTCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 8, 5, stride=2)
-        self.BN1 = nn.BatchNorm2d(8)
-        self.conv2 = nn.Conv2d(8, 8, 5, stride=2)
-        self.BN2 = nn.BatchNorm2d(8)
-        self.conv3 = nn.Conv2d(8, 8, 3, stride=1)
-        self.fc = nn.Linear(8*2*2, 10)
-    
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.BN1(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.BN(2)
-        x = self.conv3(x)
-        x = F.relu(x)
-        x = x.view(-1, 8*2*2)
-        x = self.fc(x)
-        x = torch.softmax(x, dim=-1)
+        x = F.sigmoid(x)
+        x = self.fc3(x)
+        x = F.sigmoid(x)
         return x
 
 
@@ -64,19 +38,19 @@ def compute_acc(argmax, y):
 
 
 IMG_SIZE = 28
-BATCH_SIZE = 256
+BATCH_SIZE = 128
 LEARNING_RATE = 0.001
-NUM_EPOCHES = 30
+NUM_EPOCHES = 20
 
 transforms = Compose([
     ToTensor(),
 ])
 
-trainset = MNIST('../data/', train=True, transform=transforms, download=True)
-testset = MNIST('../data/', train=False, transform=transforms, download=True)
+trainset = MNIST('../chapter_6_cnn/dataset/', train=True, transform=transforms, download=True)
+testset = MNIST('../chapter_6_cnn/dataset/', train=False, transform=transforms, download=True)
 
 args = {
-    'num_workers': 1,
+    'num_workers': 0,
     'batch_size': BATCH_SIZE,
     'shuffle': True,
 }
@@ -85,13 +59,13 @@ train_loader = DataLoader(trainset, **args)
 test_loader = DataLoader(testset, **args)
 
 model = MNISTDNN(IMG_SIZE).cuda()
+print(model)
+# model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+# num_params = sum([np.prod(p.size()) for p in model_parameters])
+# print("number of parameters : {}".format(num_params))
 
-model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-num_params = sum([np.prod(p.size()) for p in model_parameters])
-print("number of parameters : {}".format(num_params))
-
-optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
-loss_fn = nn.CrossEntropyLoss()
+optimizer = SGD(model.parameters())
+loss_fn = nn.MSELoss()
 
 for epoch in range(NUM_EPOCHES):
     tot_loss = 0.0
@@ -100,7 +74,8 @@ for epoch in range(NUM_EPOCHES):
         optimizer.zero_grad()
         x = x.cuda().view(-1, IMG_SIZE*IMG_SIZE)
         y_ = model(x)
-        loss = loss_fn(y_, y.cuda())
+        y = F.one_hot(y, num_classes=y_.shape[1]).float()
+        loss = loss_fn(y_, y.cuda()) 
         loss.backward()
         tot_loss += loss.item()
         optimizer.step()
@@ -115,4 +90,4 @@ for epoch in range(NUM_EPOCHES):
 
         print("Acc(val) : {}".format(test_acc))
 
-torch.save(model.state_dict(), "../models/DNN.pt")
+torch.save(model.state_dict(), "../chapter_6_cnn/models/DNN.pt")
