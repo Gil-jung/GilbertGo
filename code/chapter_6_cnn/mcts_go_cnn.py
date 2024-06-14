@@ -32,9 +32,9 @@ class MCTSAgentCNN(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3)   # The first layer in our network is a Conv2D layer with 32 output filters.
         self.dropout1 = nn.Dropout(p=0.6)
         self.conv2 = nn.Conv2d(32, 64, 3)  # For this layer we choose a 3 by 3 convolutional kernel.
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=1, padding=0)
+        self.pool = nn.MaxPool2d(kernel_size=2)
         self.dropout2 = nn.Dropout(0.6)
-        self.fc1 = nn.Linear(in_features=64*3*3, out_features=128)
+        self.fc1 = nn.Linear(in_features=64*2*2, out_features=128)
         self.dropout3 = nn.Dropout(0.6)
         self.fc2 = nn.Linear(128, IMG_SIZE*IMG_SIZE)
 
@@ -46,7 +46,7 @@ class MCTSAgentCNN(nn.Module):
         x = F.relu(x)
         x = self.pool(x)
         x = self.dropout2(x)
-        x = x.view(-1, 64*3*3)  # We then flatten the 3D output of the previous convolutional layer...
+        x = x.view(-1, 64*2*2)  # We then flatten the 3D output of the previous convolutional layer...
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout3(x)
@@ -137,10 +137,9 @@ model_test.load_state_dict(torch.load(current_path + "\\models\\MCTSAgentCNN.pt"
 model_test.eval()
 x, y = next(iter(test_loader))
 x = x.cuda()
-y = y.argmax(dim=-1).cuda()
 y_ = model_test(x)
 _, argmax = torch.max(y_, dim=-1)
 _, y_arg = torch.max(y, dim=-1)
-test_acc = compute_acc(argmax, y_arg)
+test_acc = compute_acc(argmax, y_arg.cuda())
 
 print("Acc(test) : {}".format(test_acc))
