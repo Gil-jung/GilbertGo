@@ -14,7 +14,7 @@ def main():
 
     go_board_rows, go_board_cols = 19, 19
     num_classes = go_board_rows * go_board_cols
-    num_games = 100
+    num_games = 1000
 
     def compute_acc(argmax, y):
         count = 0
@@ -25,7 +25,7 @@ def main():
 
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
-    NUM_EPOCHES = 5
+    NUM_EPOCHES = 50
 
     encoder = OnePlaneEncoder((go_board_rows, go_board_cols))  # First we create an encoder of board size.
 
@@ -77,6 +77,7 @@ def main():
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
         }, current_path + "\\checkpoints\\small_model_epoch_{epoch}.pt")
+
 
 if __name__ == '__main__':
     main()

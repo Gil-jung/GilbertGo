@@ -8,22 +8,20 @@ class BetaGoEncoder(Encoder):
     def __init__(self, board_size):
         """7 plane encoder as used in betago"""
         self.board_width, self.board_height = board_size
-        # 0 - 3. black stones with 1, 2, 3, 4+ liberties
-        # 4 - 7. white stones with 1, 2, 3, 4+ liberties
-        # 8. black plays next
-        # 9. white plays next
-        # 10. move would be illegal due to ko        
-        self.num_planes = 11
+        # 0 - 2. our stone with 1, 2, 3+ liberties
+        # 3 - 5. opponent stone with 1, 2, 3+ liberties
+        # 6. move would be illegal due to ko    
+        self.num_planes = 7
     
     def name(self):
-        return 'simple'
+        return 'betago'
     
     def encode(self, game_state):
         board_tensor = np.zeros(self.shape())
-        if game_state.next_player == Player.black:
-            board_tensor[8] = 1
-        else:
-            board_tensor[9] = 1
+        base_plane = {
+            game_state.next_player: 0,
+            game_state.next_player.other: 3,
+        }
         for r in range(self.board_height):
             for c in range(self.board_width):
                 p = Point(row=r + 1, col=c + 1)
@@ -31,11 +29,10 @@ class BetaGoEncoder(Encoder):
                 
                 if go_string is None:
                     if game_state.does_move_violate_ko(game_state.next_player, Move.play(p)):
-                        board_tensor[10][r][c] = 1
+                        board_tensor[6][r][c] = 1
                 else:
-                    liberty_plane = min(4, go_string.num_liberties) - 1
-                    if go_string.color == Player.white:
-                        liberty_plane += 4
+                    liberty_plane = min(3, go_string.num_liberties) - 1
+                    liberty_plane += base_plane[go_string.color]
                     board_tensor[liberty_plane][r][c] = 1
 
         return board_tensor
@@ -59,4 +56,4 @@ class BetaGoEncoder(Encoder):
     
 
 def create(board_size):
-    return SimpleEncoder(board_size)
+    return BetaGoEncoder(board_size)
