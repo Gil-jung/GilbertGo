@@ -1,29 +1,53 @@
 from __future__ import absolute_import
 
-import torch
-from torch.nn import Linear, Flatten, Conv2d, ZeroPad2d
-from torch.nn.functional import relu
+import torch.nn as nn
 
 
-def layers():
-    return [
-        ZeroPad2d(3),
-        Conv2d(in_channels=1, out_channels=48, kernel_size=7),
-        relu(),
+class SMALL(nn.Module):
+    def __init__(self, IMG_SIZE=19, num_planes=1):
+        super(SMALL, self).__init__()
+        self.img_size = IMG_SIZE
 
-        ZeroPad2d(2),
-        Conv2d(48, 32, 5),
-        relu(),
+        self.layer1 = nn.Sequential(
+            nn.ZeroPad2d(padding=3),
+            nn.Conv2d(in_channels=num_planes, out_channels=48, kernel_size=7),
+            nn.ReLU(inplace=True)
+        )
 
-        ZeroPad2d(2),
-        Conv2d(32, 32, 5),
-        relu(),
+        self.layer2 = nn.Sequential(
+            nn.ZeroPad2d(padding=2),
+            nn.Conv2d(in_channels=48, out_channels=32, kernel_size=5),
+            nn.ReLU(inplace=True)
+        )
 
-        ZeroPad2d(2),
-        Conv2d(32, 32, 5),
-        relu(),
+        self.layer3 = nn.Sequential(
+            nn.ZeroPad2d(padding=2),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5),
+            nn.ReLU(inplace=True)
+        )
 
-        Flatten(),
-        Linear(32*19*19, 512),
-        relu(),
-    ]
+        self.layer4 = nn.Sequential(
+            nn.ZeroPad2d(padding=2),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5),
+            nn.ReLU(inplace=True)
+        )
+
+        self.layer5 = nn.Sequential(
+            nn.Linear(in_features=32*IMG_SIZE*IMG_SIZE, out_features=512),
+            nn.ReLU(inplace=True)
+        )
+
+        self.layer6 = nn.Sequential(
+            nn.Linear(in_features=512, out_features=IMG_SIZE*IMG_SIZE),
+            nn.Softmax(dim=-1)
+        )
+    
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = x.view(-1, 32*self.img_size*self.img_size)
+        x = self.layer5(x)
+        x = self.layer6(x)
+        return x

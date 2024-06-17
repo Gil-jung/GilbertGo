@@ -1,5 +1,6 @@
 import glob
 import numpy as np
+import torch
 
 
 class DataGenerator:
@@ -26,7 +27,8 @@ class DataGenerator:
                 label_file = feature_file.replace('features', 'labels')
                 x = np.load(feature_file)
                 y = np.load(label_file)
-                x = x.astype('float32')
+                x = torch.tensor(x, dtype=torch.float32)
+                y = torch.tensor(y, dtype=torch.long)
                 while x.shape[0] >= batch_size:
                     x_batch, x = x[:batch_size], x[batch_size:]
                     y_batch, y = y[:batch_size], y[batch_size:]
