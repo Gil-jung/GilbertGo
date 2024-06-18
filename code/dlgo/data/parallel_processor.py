@@ -9,6 +9,8 @@ import shutil
 import numpy as np
 import multiprocessing
 import sys
+import torch
+from torchvision.transforms import ToTensor
 
 from dlgo.gosgf import Sgf_game
 from dlgo.goboard_fast import Board, GameState, Move
@@ -69,6 +71,8 @@ class GoDataProcessor:
         features = np.zeros(feature_shape)
         labels = np.zeros((total_examples,))
 
+        transform = ToTensor()
+
         counter = 0
         for index in game_list:
             name = name_list[index + 1]
@@ -90,7 +94,7 @@ class GoDataProcessor:
                     else:
                         move = Move.pass_turn()  # ... or pass, if there is none.
                     if first_move_done and point is not None:
-                        features[counter] = self.encoder.encode(game_state)  # We encode the current game state as features...
+                        features[counter] = transform(self.encoder.encode(game_state)).reshape(-1, 19, 19)  # We encode the current game state as features...
                         labels[counter] = self.encoder.encode_point(point)  # ... and the next move as label for the features.
                         counter += 1
                     game_state = game_state.apply_move(move)  # Afterwards the move is applied to the board and we proceed with the next one.
