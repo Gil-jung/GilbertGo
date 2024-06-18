@@ -37,7 +37,7 @@ def main():
 
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
-    NUM_EPOCHES = 5
+    NUM_EPOCHES = 20
 
     encoder = OnePlaneEncoder((go_board_rows, go_board_cols))  # First we create an encoder of board size.
 
@@ -49,13 +49,13 @@ def main():
     # input_shape = (encoder.num_planes, go_board_rows, go_board_cols)
 
     model = Small(go_board_rows, encoder.num_planes).cuda()
-    # model.apply(initialize_weights)
+    model.apply(initialize_weights                                                                                                         )
     print(model)
 
     optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss()
     
-    total_steps = generator.get_num_samples() // BATCH_SIZE
+    total_steps = generator.get_num_samples() / 10
     print(generator.num_samples)
 
     for epoch in range(NUM_EPOCHES):

@@ -22,6 +22,18 @@ def main():
             if argmax[i] == y[i]:
                 count += 1
         return count / len(argmax)
+    
+    def initialize_weights(m):
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_uniform_(m.weight.data,nonlinearity='relu')
+            if m.bias is not None:
+                nn.init.constant_(m.bias.data, 0)
+        elif isinstance(m, nn.BatchNorm2d):
+            nn.init.constant_(m.weight.data, 1)
+            nn.init.constant_(m.bias.data, 0)
+        elif isinstance(m, nn.Linear):
+            nn.init.kaiming_uniform_(m.weight.data)
+            nn.init.constant_(m.bias.data, 0)
 
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
@@ -37,14 +49,17 @@ def main():
     # input_shape = (encoder.num_planes, go_board_rows, go_board_cols)
 
     model = Small(go_board_rows, encoder.num_planes).cuda()
+    model.apply(initialize_weights                                                                                                         )
     print(model)
 
-    optimizer = SGD(model.parameters())
+    optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss()
-    model.train()
+    
+    total_steps = generator.get_num_samples() / 10
+    print(generator.num_samples)
 
-    total_steps = generator.num_samples() // BATCH_SIZE
     for epoch in range(NUM_EPOCHES):
+        model.train()
         tot_loss = 0.0
         steps = 0
 
@@ -61,23 +76,28 @@ def main():
             if steps >= total_steps:
                 break
 
-        print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss))
-        if epoch % 2 == 1:
-            x, y = next(iter(test_generator))
-            x = x.cuda()
-            y_ = model(x)
-            _, argmax = torch.max(y_, dim=-1)
-            test_acc = compute_acc(argmax, y)
+        print('='*100)
+        print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
+        _, argmax = torch.max(y_, dim=1)
+        train_acc = compute_acc(argmax, y)
+        print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
 
-            print("Acc(val) : {}".format(test_acc))
+        model.eval()
+        x, y = next(iter(test_generator.generate(BATCH_SIZE, num_classes)))
+        x = x.cuda()
+        y_ = model(x)
+        loss = loss_fn(y_, y.cuda()) 
+        print("Epoch {}, Loss(val) : {}".format(epoch+1, loss.item()))
+        _, argmax = torch.max(y_, dim=1)
+        test_acc = compute_acc(argmax, y)
+        print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
 
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-        }, current_path + "\\checkpoints\\small_model_epoch_{epoch}.pt")
-
+        }, current_path + f"\\checkpoints\\small_model_epoch_{epoch+1}.pt")
 
 if __name__ == '__main__':
     main()
