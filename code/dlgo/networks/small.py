@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class Small(nn.Module):
@@ -53,3 +52,6 @@ class Small(nn.Module):
         x = self.layer6(x)
 
         return x
+    
+    def name(self):
+        return 'small'

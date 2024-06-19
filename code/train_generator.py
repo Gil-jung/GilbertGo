@@ -55,7 +55,7 @@ def main():
     optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss()
     
-    total_steps = generator.get_num_samples() / 10
+    total_steps = generator.get_num_samples() // 10
     print(generator.num_samples)
 
     for epoch in range(NUM_EPOCHES):

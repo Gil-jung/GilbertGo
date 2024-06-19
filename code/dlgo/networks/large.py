@@ -9,44 +9,44 @@ class Large(nn.Module):
         self.img_size = IMG_SIZE
 
         self.layer1 = nn.Sequential(
-            nn.ZeroPad2d(padding=3),
-            nn.Conv2d(in_channels=num_planes, out_channels=64, kernel_size=7),
+            nn.Conv2d(in_channels=num_planes, out_channels=64, kernel_size=7, padding=3),
+            nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer2 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=num_planes, out_channels=64, kernel_size=5),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer3 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer4 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=64, out_channels=48, kernel_size=5),
+            nn.Conv2d(in_channels=64, out_channels=48, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=48),
             nn.ReLU(inplace=True)
         )
 
         self.layer5 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=48, out_channels=48, kernel_size=5),
+            nn.Conv2d(in_channels=48, out_channels=48, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=48),
             nn.ReLU(inplace=True)
         )
 
         self.layer6 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=48, out_channels=32, kernel_size=5),
+            nn.Conv2d(in_channels=48, out_channels=32, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=32),
             nn.ReLU(inplace=True)
         )
 
         self.layer7 = nn.Sequential(
-            nn.ZeroPad2d(padding=2),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, padding=2),
+            nn.BatchNorm2d(num_features=32),
             nn.ReLU(inplace=True)
         )
 
@@ -57,7 +57,7 @@ class Large(nn.Module):
 
         self.layer9 = nn.Sequential(
             nn.Linear(in_features=1024, out_features=IMG_SIZE*IMG_SIZE),
-            nn.Softmax(dim=-1)
+            # nn.Softmax(dim=-1)
         )
     
     def forward(self, x):
@@ -71,4 +71,8 @@ class Large(nn.Module):
         x = x.view(-1, 32*self.img_size*self.img_size)
         x = self.layer8(x)
         x = self.layer9(x)
+
         return x
+    
+    def name(self):
+        return 'large'

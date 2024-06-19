@@ -1,10 +1,10 @@
 from dlgo.data.parallel_processor import GoDataProcessor
-from dlgo.encoders.oneplane import OnePlaneEncoder
-from dlgo.networks.small import Small
+from dlgo.encoders.sevenplane import SevenPlaneEncoder
+from dlgo.networks.large import Large
 
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import Adadelta
 
 import os
 
@@ -39,7 +39,7 @@ def main():
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 50
 
-    encoder = OnePlaneEncoder((go_board_rows, go_board_cols))  # First we create an encoder of board size.
+    encoder = SevenPlaneEncoder((go_board_rows, go_board_cols))  # First we create an encoder of board size.
 
     processor = GoDataProcessor(encoder=encoder.name())  # Then we initialize a Go Data processor with it.
 
@@ -48,14 +48,14 @@ def main():
 
     # input_shape = (encoder.num_planes, go_board_rows, go_board_cols)
 
-    model = Small(go_board_rows, encoder.num_planes).cuda()
+    model = Large(go_board_rows, encoder.num_planes).cuda()
     model.apply(initialize_weights                                                                                                         )
     print(model)
 
-    optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
+    optimizer = Adadelta(model.parameters())
     loss_fn = nn.CrossEntropyLoss()
     
-    total_steps = generator.get_num_samples() / 10
+    total_steps = generator.get_num_samples() // 10
     print(generator.num_samples)
 
     for epoch in range(NUM_EPOCHES):
@@ -97,7 +97,7 @@ def main():
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-        }, current_path + f"\\checkpoints\\small_model_epoch_{epoch+1}.pt")
+        }, current_path + f"\\checkpoints\\large_model_epoch_{epoch+1}.pt")
 
 if __name__ == '__main__':
     main()
