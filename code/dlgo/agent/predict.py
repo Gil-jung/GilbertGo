@@ -10,7 +10,7 @@ import dlgo.goboard_fast as goboard
 
 __all__ = [
     'DeepLearningAgent',
-    'load_prediction_agent'
+    'load_prediction_agent',
 ]
 
 
@@ -53,11 +53,11 @@ class DeepLearningAgent(Agent):
             'board_height': self.encoder.board_height,
             'model_state_dict': self.model.state_dict(),
             'model': self.model,
-        }, path + f"\\models\\DL_Agent_{self.model.name()}_{self.encoder.name()}_{name}.pt")
+        }, path + f"\\agents\\DL_Agent_{self.model.name()}_{self.encoder.name()}_{name}.pt")
     
 def load_prediction_agent(model_name='large', encoder_name='sevenplane', name='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    pt_file = torch.load(path + f"\\models\\DL_Agent_{model_name}_{encoder_name}_{name}.pt")
+    pt_file = torch.load(path + f"\\agents\\DL_Agent_{model_name}_{encoder_name}_{name}.pt")
     model = pt_file['model']
     encoder_name = pt_file['encoder_name']
     if not isinstance(encoder_name, str):
