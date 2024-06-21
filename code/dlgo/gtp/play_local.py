@@ -1,7 +1,6 @@
 from __future__ import print_function
 import subprocess
 import re
-import h5py
 
 from dlgo.agent.predict import load_prediction_agent
 from dlgo.agent.termination import PassWhenOpponentPasses, TerminationAgent
@@ -40,6 +39,8 @@ class LocalGtpBot():
             return ["gnugo", "--mode", "gtp"]
         elif opponent == 'pachi':
             return ["pachi"]
+        elif opponent == 'fuego':
+            return ["fuego"]
         else:
             raise ValueError("Unknown bot name {}".format(opponent))
     
