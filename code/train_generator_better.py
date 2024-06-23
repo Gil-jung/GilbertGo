@@ -49,7 +49,7 @@ def main():
     # input_shape = (encoder.num_planes, go_board_rows, go_board_cols)
 
     model = Large(go_board_rows, encoder.num_planes).cuda()
-    model.apply(initialize_weights                                                                                                         )
+    model.apply(initialize_weights)
     print(model)
 
     optimizer = Adadelta(model.parameters())

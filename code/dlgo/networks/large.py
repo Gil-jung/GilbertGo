@@ -9,43 +9,43 @@ class Large(nn.Module):
         self.img_size = IMG_SIZE
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels=num_planes, out_channels=64, kernel_size=7, padding=3),
+            nn.Conv2d(in_channels=num_planes, out_channels=64, kernel_size=7, padding=3, bias=False),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True)
         )
 
         self.layer4 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=48, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=64, out_channels=48, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=48),
             nn.ReLU(inplace=True)
         )
 
         self.layer5 = nn.Sequential(
-            nn.Conv2d(in_channels=48, out_channels=48, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=48, out_channels=48, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=48),
             nn.ReLU(inplace=True)
         )
 
         self.layer6 = nn.Sequential(
-            nn.Conv2d(in_channels=48, out_channels=32, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=48, out_channels=32, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=32),
             nn.ReLU(inplace=True)
         )
 
         self.layer7 = nn.Sequential(
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, padding=2, bias=False),
             nn.BatchNorm2d(num_features=32),
             nn.ReLU(inplace=True)
         )

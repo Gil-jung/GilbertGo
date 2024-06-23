@@ -2,6 +2,9 @@
 import os
 import numpy as np
 import torch
+import torch.nn as nn
+from torch.optim import SGD
+from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent.base import Agent
 from dlgo.agent.helper_fast import is_point_an_eye
@@ -11,8 +14,31 @@ from dlgo import goboard_fast as goboard
 __all__ = [
     'PolicyAgent',
     'load_policy_agent',
-    'policy_gradient_loss',
 ]
+
+
+def normalize(x):
+    total = np.sum(x)
+    return x / total
+
+
+class ExperienceDataSet(Dataset):
+    def __init__(self, experience, transform=None):
+        self.experience = experience
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.experience.states)
+    
+    def __getitem__(self, idx):
+        X = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
+        y = torch.tensor(self.experience.actions, dtype=torch.long)[idx]
+        r = torch.tensor(self.experience.rewards, dtype=torch.long)[idx]
+
+        if self.transform:
+            X = self.transform(X)
+
+        return X, (y, r)
 
 
 class PolicyAgent(Agent):
@@ -22,24 +48,28 @@ class PolicyAgent(Agent):
         self._encoder = encoder
         self._collector = None
         self._temperature = 0.0
+    
+    def set_temperature(self, temperature):
+        self._temperature = temperature
+    
+    def set_collector(self, collector):
+        self._collector = collector
 
-    def predict(self, game_state):
-        encoded_state = self._encoder.encode(game_state)
-        input_tensor = torch.unsqueeze(torch.tensor(encoded_state, dtype=torch.float32), dim=0)
+    def predict(self, input_tensor):
         return self._model(input_tensor)
 
     def select_move(self, game_state):
         num_moves = self._encoder.board_width * self._encoder.board_height
 
         board_tensor = self._encoder.encode(game_state)
-        x = np.array([board_tensor])
+        input_tensor = torch.unsqueeze(torch.tensor(board_tensor, dtype=torch.float32), dim=0)
 
         if np.random.random() < self._temperature:
             # Explore random moves.
             move_probs = np.ones(num_moves) / num_moves
         else:
             # Follow our current policy.
-            move_probs = self._model.predict(x)
+            move_probs = self.predict(input_tensor)
 
         # Prevent move probs from getting stuck at 0 or 1.
         move_probs = torch.squeeze(move_probs, dim=0).detach().numpy()
@@ -75,6 +105,48 @@ class PolicyAgent(Agent):
             'model_state_dict': self._model.state_dict(),
             'model': self._model,
         }, path + f"\\agents\\PG_Agent_{self._model.name()}_{self._encoder.name()}_{name}.pt")
+
+    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0001, clipnorm=1.0, batch_size=512):
+        winning_exp_dataset = ExperienceDataSet(winning_exp_buffer)
+        winning_exp_loader = DataLoader(winning_exp_dataset, batch_size=batch_size)
+        losing_exp_dataset = ExperienceDataSet(losing_exp_buffer)
+        losing_exp_loader = DataLoader(losing_exp_dataset, batch_size=batch_size)
+        optimizer = SGD(self._model.parameters(), lr=lr)
+        loss_fn = nn.CrossEntropyLoss()
+        NUM_EPOCHES = 5
+        self._model.cuda()
+
+        for epoch in range(NUM_EPOCHES):
+            self._model.train()
+            tot_loss = 0.0
+            steps = 0
+
+            for x, y in winning_exp_loader:
+                steps += 1
+                optimizer.zero_grad()
+                x = x.cuda()
+                y_ = self._model(x)
+                loss = loss_fn(y_, y[0].cuda()) 
+                loss.backward()
+                tot_loss += loss.item()
+                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                optimizer.step()
+
+            for x, y in losing_exp_loader:
+                steps += 1
+                optimizer.zero_grad()
+                x = x.cuda()
+                y_ = self._model(x)
+                loss = 1 - loss_fn(y_, y[0].cuda())
+                loss.backward()
+                tot_loss += loss.item()
+                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                optimizer.step()
+
+            print('='*100)
+            print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
+
+        self._model.cpu()
 
 
 def load_policy_agent(model_name='large', encoder_name='simple', name='v0'):
