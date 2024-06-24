@@ -1,5 +1,5 @@
 """Policy gradient learning."""
-import os
+import os, sys
 import numpy as np
 import torch
 import torch.nn as nn
@@ -33,12 +33,11 @@ class ExperienceDataSet(Dataset):
     def __getitem__(self, idx):
         X = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
         y = torch.tensor(self.experience.actions, dtype=torch.long)[idx]
-        r = torch.tensor(self.experience.rewards, dtype=torch.long)[idx]
 
         if self.transform:
             X = self.transform(X)
 
-        return X, (y, r)
+        return X, y
 
 
 class PolicyAgent(Agent):
@@ -126,7 +125,7 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = loss_fn(y_, y[0].cuda()) 
+                loss = loss_fn(y_, y.cuda()) 
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
@@ -137,7 +136,7 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = 1 - loss_fn(y_, y[0].cuda())
+                loss = 1 - loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)

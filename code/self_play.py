@@ -1,3 +1,4 @@
+import os
 import argparse
 import datetime
 from collections import namedtuple
@@ -14,6 +15,7 @@ STONE_TO_CHAR = {
     Player.black: 'x',
     Player.white: 'o',
 }
+path = os.path.dirname(__file__)
 
 
 def avg(items):
@@ -74,6 +76,7 @@ def main():
     parser.add_argument('--temperature', type=float, default=0.0)
 
     args = parser.parse_args()
+    game_log_out = args.game_log_out
 
     agent1 = agent.load_policy_agent(name=args.learning_agent)
     agent2 = agent.load_policy_agent(name=args.learning_agent)
@@ -84,7 +87,7 @@ def main():
     collector2 = rl.ExperienceCollector()
 
     color1 = Player.black
-    logf = open(args.game_log_out, 'a')
+    logf = open(path + "\\logs\\" + game_log_out + ".txt", 'a')
     logf.write('Begin training at %s\n' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),))
     for i in range(args.num_games):
         print('Simulating game %d/%d...' % (i + 1, args.num_games))
@@ -99,11 +102,11 @@ def main():
             white_player, black_player = agent1, agent2
         game_record = simulate_game(black_player, white_player)
         if game_record.winner == color1:
-            print('Agent 1 wins.')
+            print('Agent1 wins.')
             collector1.complete_episode(reward=1)
             collector2.complete_episode(reward=-1)
         else:
-            print('Agent 2 wins.')
+            print('Agent2 wins.')
             collector2.complete_episode(reward=1)
             collector1.complete_episode(reward=-1)
         color1 = color1.other
