@@ -1,7 +1,6 @@
 import argparse
 import torch.nn as nn
 
-from dlgo import agent
 from dlgo import rl
 from dlgo import encoders
 from dlgo.networks.large_q import Large_Q

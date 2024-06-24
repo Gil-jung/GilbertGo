@@ -120,7 +120,7 @@ class QAgent(Agent):
             for x, y in winning_exp_loader:
                 steps += 1
                 optimizer.zero_grad()
-                x = x.cuda()
+                x[0], x[1] = x[0].cuda(), x[1].cuda()
                 y_ = self.model(x)
                 loss = loss_fn(y_, y.cuda()) 
                 loss.backward()
@@ -130,8 +130,8 @@ class QAgent(Agent):
             for x, y in losing_exp_loader:
                 steps += 1
                 optimizer.zero_grad()
-                x = x.cuda()
-                y_ = self._model(x)
+                x[0], x[1] = x[0].cuda(), x[1].cuda()
+                y_ = self.model(x)
                 loss = loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
@@ -140,7 +140,7 @@ class QAgent(Agent):
             print('='*100)
             print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
 
-        self._model.cpu()
+        self.model.cpu()
     
     def serialize(self, name='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
