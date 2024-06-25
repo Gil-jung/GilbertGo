@@ -31,7 +31,7 @@ def main():
 
     encoder = encoders.SimpleEncoder((board_size, board_size))
     model = Large_AC(board_size, encoder.num_planes, hidden_size)
-    new_agent = rl.QAgent(model, encoder)
+    new_agent = rl.ACAgent(model, encoder)
     new_agent.model.apply(initialize_weights)
 
     new_agent.serialize(output_file)
