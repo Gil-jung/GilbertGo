@@ -105,7 +105,7 @@ class PolicyAgent(Agent):
             'model': self._model,
         }, path + f"\\agents\\AlphaGo_Policy_RL_Agent_{version}.pt")
 
-    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0001, clipnorm=1.0, batch_size=512):
+    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0000001, clipnorm=1.0, batch_size=512):
         winning_exp_dataset = ExperienceDataSet(winning_exp_buffer)
         winning_exp_loader = DataLoader(winning_exp_dataset, batch_size=batch_size)
         losing_exp_dataset = ExperienceDataSet(losing_exp_buffer)
