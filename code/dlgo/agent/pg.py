@@ -7,7 +7,7 @@ from torch.optim import SGD
 from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent.base import Agent
-from dlgo.agent.helper_fast import is_point_an_eye
+from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo import encoders
 from dlgo import goboard_fast as goboard
 
@@ -95,7 +95,7 @@ class PolicyAgent(Agent):
         # No legal, non-self-destructive moves less.
         return goboard.Move.pass_turn()
 
-    def serialize(self, name='v0'):
+    def serialize(self, version='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
         torch.save({
             'encoder_name': self._encoder.name(),
@@ -103,7 +103,7 @@ class PolicyAgent(Agent):
             'board_height': self._encoder.board_height,
             'model_state_dict': self._model.state_dict(),
             'model': self._model,
-        }, path + f"\\agents\\PG_Agent_{self._model.name()}_{self._encoder.name()}_{name}.pt")
+        }, path + f"\\agents\\AlphaGo_Policy_RL_Agent_{version}.pt")
 
     def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0001, clipnorm=1.0, batch_size=512):
         winning_exp_dataset = ExperienceDataSet(winning_exp_buffer)
@@ -148,9 +148,9 @@ class PolicyAgent(Agent):
         self._model.cpu()
 
 
-def load_policy_agent(model_name='large', encoder_name='simple', name='v0'):
+def load_policy_agent(version='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    pt_file = torch.load(path + f"\\agents\\PG_Agent_{model_name}_{encoder_name}_{name}.pt")
+    pt_file = torch.load(path + f"\\agents\\AlphaGo_Policy_RL_Agent_{version}.pt")
     model = pt_file['model']
     encoder_name = pt_file['encoder_name']
     if not isinstance(encoder_name, str):

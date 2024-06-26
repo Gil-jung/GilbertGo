@@ -100,7 +100,7 @@ class AlphaGoPolicyNet(nn.Module):
 
 
 class AlphaGoValueNet(nn.Module):
-    def __init__(self, IMG_SIZE=19, num_planes=48):
+    def __init__(self, IMG_SIZE=19, num_planes=49):
         super(AlphaGoValueNet, self).__init__()
         self.img_size = IMG_SIZE
 

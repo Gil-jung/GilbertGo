@@ -1,7 +1,7 @@
 import numpy as np
 
 from dlgo.agent.base import Agent
-from dlgo.agent.helper_fast import is_point_an_eye
+from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo.goboard_fast import Move
 from dlgo.gotypes import Point
 

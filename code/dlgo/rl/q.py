@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from dlgo import encoders
 from dlgo import goboard_fast as goboard
 from dlgo.agent import Agent
-from dlgo.agent.helper_fast import is_point_an_eye
+from dlgo.agent.helpers_fast import is_point_an_eye
 
 __all__ = [
     'QAgent',

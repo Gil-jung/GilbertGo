@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from dlgo.agent.base import Agent
-from dlgo.agent.helper_fast import is_point_an_eye
+from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo import encoders
 import dlgo.goboard_fast as goboard
 
@@ -45,7 +45,7 @@ class DeepLearningAgent(Agent):
                 return goboard.Move.play(point)
         return goboard.Move.pass_turn()  # If no legal and non-self-destructive moves are left, pass.
     
-    def serialize(self, name='v0'):
+    def serialize(self, version='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
         torch.save({
             'encoder_name': self.encoder.name(),
@@ -53,11 +53,11 @@ class DeepLearningAgent(Agent):
             'board_height': self.encoder.board_height,
             'model_state_dict': self.model.state_dict(),
             'model': self.model,
-        }, path + f"\\agents\\DL_Agent_{self.model.name()}_{self.encoder.name()}_{name}.pt")
+        }, path + f"\\agents\\AlphaGo_Policy_SL_Agent_{version}.pt")
     
-def load_prediction_agent(model_name='large', encoder_name='sevenplane', name='v0'):
+def load_prediction_agent(version='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    pt_file = torch.load(path + f"\\agents\\DL_Agent_{model_name}_{encoder_name}_{name}.pt")
+    pt_file = torch.load(path + f"\\agents\\AlphaGo_Policy_SL_Agent_{version}.pt")
     model = pt_file['model']
     encoder_name = pt_file['encoder_name']
     if not isinstance(encoder_name, str):

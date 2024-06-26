@@ -6,7 +6,7 @@ from torch.optim import SGD
 from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent.base import Agent
-from dlgo.agent.helper_fast import is_point_an_eye
+from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo import encoders
 from dlgo import goboard_fast as goboard
 
