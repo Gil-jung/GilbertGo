@@ -25,12 +25,10 @@ class DataGenerator:
             base = self.data_directory + '/' + file_name + '_features_*.npy'
             for feature_file in glob.glob(base):
                 label_file = feature_file.replace('features', 'labels')
-                # x = np.load(feature_file)
-                # y = np.load(label_file)
-                x = torch.load(feature_file, dtype=torch.float32)
-                y = torch.load(label_file, dtype=torch.long)
-                # x = torch.tensor(x, dtype=torch.float32)
-                # y = torch.tensor(y, dtype=torch.long)
+                x = np.load(feature_file)
+                y = np.load(label_file)
+                x = torch.tensor(x, dtype=torch.float32)
+                y = torch.tensor(y, dtype=torch.long)
                 while x.shape[0] >= batch_size:
                     x_batch, x = x[:batch_size], x[batch_size:]
                     y_batch, y = y[:batch_size], y[batch_size:]

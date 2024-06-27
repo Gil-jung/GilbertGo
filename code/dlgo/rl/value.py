@@ -72,18 +72,19 @@ class ValueAgent(Agent):
         for move in game_state.legal_moves():
             if not move.is_play:
                 continue
-            moves.append(self.encoder.encode_point(move.point))
+            next_state = game_state.apply_move(move)
+            board_tensor = self.encoder.encode(next_state)
+            moves.append(move)
             board_tensors.append(board_tensor)
         if not moves:
             return goboard.Move.pass_turn()
 
-        num_moves = len(moves)
+        # num_moves = len(moves)
         board_tensors = torch.tensor(board_tensors, dtype=torch.float32)
-        move_vectors = torch.zeros((num_moves, self.encoder.num_points()), dtype=torch.float32)
-        for i, move in enumerate(moves):
-            move_vectors[i][move] = 1
-        
-        values = self.predict((board_tensors, move_vectors))
+
+
+
+        values = self.predict(board_tensors)
         values = torch.squeeze(values, dim=1).detach().numpy()
 
         ranked_moves = self.rank_moves_eps_greedy(values)

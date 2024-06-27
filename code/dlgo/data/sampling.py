@@ -19,7 +19,7 @@ class Sampler:
         self.test_folder = 'test_samples.py'
         self.cap_year = cap_year
 
-        random.seed(seed)
+        # random.seed(seed)
         self.compute_test_samples()
 
     def draw_data(self, data_type, num_samples):
