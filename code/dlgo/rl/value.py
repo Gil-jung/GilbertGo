@@ -27,17 +27,12 @@ class ValueDataSet(Dataset):
     
     def __getitem__(self, idx):
         states = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
-        actions = torch.zeros((len(self.experience.actions), self.num_moves), dtype=torch.float32)
-        actions[idx][self.experience.actions[idx]] = 1
-        actions = actions[idx]
-        rewards = torch.zeros((len(self.experience.rewards),))
-        rewards[idx] = 1 if self.experience.rewards[idx] > 0 else 0
-        rewards = rewards[idx]
+        rewards = torch.tensor(self.experience.rewards, dtype=torch.long)[idx]
 
         if self.transform:
-            (states, actions) = self.transform((states, actions))
+            states = self.transform(states)
 
-        return (states, actions), rewards
+        return states, rewards
 
 
 class ValueAgent(Agent):
@@ -65,8 +60,8 @@ class ValueAgent(Agent):
         return self.model(input_tensor)
 
     def select_move(self, game_state):
-        board_tensor = self.encoder.encode(game_state)
-
+        
+        # Loop over all legal moves.
         moves = []
         board_tensors = []
         for move in game_state.legal_moves():
@@ -82,23 +77,29 @@ class ValueAgent(Agent):
         # num_moves = len(moves)
         board_tensors = torch.tensor(board_tensors, dtype=torch.float32)
 
+        # Values of the next state from opponent's view.
+        opp_values = self.predict(board_tensors)
+        opp_values = torch.squeeze(opp_values, dim=0).detach().numpy()
 
+        # Values from our point of view.
+        values = opp_values * (-1)
 
-        values = self.predict(board_tensors)
-        values = torch.squeeze(values, dim=1).detach().numpy()
-
-        ranked_moves = self.rank_moves_eps_greedy(values)
+        if self.policy == 'eps-greedy':
+            ranked_moves = self.rank_moves_eps_greedy(values)
+        elif self.policy == 'weighted':
+            ranked_moves = self.rank_moves_weighted(values)
 
         for move_idx in ranked_moves:
-            point = self.encoder.decode_point_index(moves[move_idx])
-            if not is_point_an_eye(game_state.board, point, game_state.next_player):
+            move = moves[move_idx]
+            if not is_point_an_eye(game_state.board, move.point, game_state.next_player):
                 if self.collector is not None:
                     self.collector.record_decision(
                         state=board_tensor,
-                        action=moves[move_idx],
+                        action=self.encoder.encode_point(move.point),
                     )
                 self.last_move_value = float(values[move_idx])
-                return goboard.Move.play(point)
+                return move
+        # No legal, non-self-destructive moves less.
         return goboard.Move.pass_turn()
     
     def rank_moves_eps_greedy(self, values):
@@ -109,10 +110,16 @@ class ValueAgent(Agent):
         # Return them in best-to-worst order.
         return ranked_moves[::-1]
     
+    def rank_moves_weighted(self, values):
+        p = values / np.sum(values)
+        p = np.power(p, 1.0 / self.temperature)
+        p = p / np.sum(p)
+        return np.random.choice(np.arange(0, len(values)), size=len(values), p=p, replace=False)
+    
     def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.1, batch_size=128):
-        winning_exp_dataset = QDataSet(winning_exp_buffer, num_moves=self.encoder.num_points())
+        winning_exp_dataset = ValueDataSet(winning_exp_buffer, num_moves=self.encoder.num_points())
         winning_exp_loader = DataLoader(winning_exp_dataset, batch_size=batch_size)
-        losing_exp_dataset = QDataSet(losing_exp_buffer, num_moves=self.encoder.num_points())
+        losing_exp_dataset = ValueDataSet(losing_exp_buffer, num_moves=self.encoder.num_points())
         losing_exp_loader = DataLoader(losing_exp_dataset, batch_size=batch_size)
         optimizer = SGD(self.model.parameters(), lr=lr)
         loss_fn = nn.MSELoss()
@@ -127,7 +134,7 @@ class ValueAgent(Agent):
             for x, y in winning_exp_loader:
                 steps += 1
                 optimizer.zero_grad()
-                x[0], x[1] = x[0].cuda(), x[1].cuda()
+                x = x.cuda()
                 y_ = self.model(x)
                 loss = loss_fn(y_, y.cuda()) 
                 loss.backward()
@@ -137,7 +144,7 @@ class ValueAgent(Agent):
             for x, y in losing_exp_loader:
                 steps += 1
                 optimizer.zero_grad()
-                x[0], x[1] = x[0].cuda(), x[1].cuda()
+                x = x.cuda()
                 y_ = self.model(x)
                 loss = loss_fn(y_, y.cuda())
                 loss.backward()
@@ -149,7 +156,7 @@ class ValueAgent(Agent):
 
         self.model.cpu()
     
-    def serialize(self, name='v0'):
+    def serialize(self, version='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
         torch.save({
             'encoder_name': self.encoder.name(),
@@ -157,15 +164,15 @@ class ValueAgent(Agent):
             'board_height': self.encoder.board_height,
             'model_state_dict': self.model.state_dict(),
             'model': self.model,
-        }, path + f"\\agents\\Q_Agent_{self.model.name()}_{self.encoder.name()}_{name}.pt")
+        }, path + f"\\agents\\AlphaGo_Value_Agent_{version}.pt")
     
     def diagnostics(self):
         return {'value': self.last_move_value}
 
 
-def load_q_agent(model_name='large_q', encoder_name='simple', name='v0'):
+def load_value_agent(version='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    pt_file = torch.load(path + f"\\agents\\Q_Agent_{model_name}_{encoder_name}_{name}.pt")
+    pt_file = torch.load(path + f"\\agents\\AlphaGo_Value_Agent_{version}.pt")
     model = pt_file['model']
     encoder_name = pt_file['encoder_name']
     if not isinstance(encoder_name, str):
@@ -175,4 +182,4 @@ def load_q_agent(model_name='large_q', encoder_name='simple', name='v0'):
     encoder = encoders.get_encoder_by_name(
         encoder_name, (board_width, board_height)
     )
-    return QAgent(model, encoder)
+    return ValueAgent(model, encoder)

@@ -95,7 +95,7 @@ class PolicyAgent(Agent):
         # No legal, non-self-destructive moves less.
         return goboard.Move.pass_turn()
 
-    def serialize(self, version='v0'):
+    def serialize(self, type='RL', version='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
         torch.save({
             'encoder_name': self._encoder.name(),
@@ -103,7 +103,7 @@ class PolicyAgent(Agent):
             'board_height': self._encoder.board_height,
             'model_state_dict': self._model.state_dict(),
             'model': self._model,
-        }, path + f"\\agents\\AlphaGo_Policy_RL_Agent_{version}.pt")
+        }, path + f"\\agents\\AlphaGo_Policy_{type}_Agent_{version}.pt")
 
     def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0000001, clipnorm=1.0, batch_size=512):
         winning_exp_dataset = ExperienceDataSet(winning_exp_buffer)
@@ -148,9 +148,9 @@ class PolicyAgent(Agent):
         self._model.cpu()
 
 
-def load_policy_agent(version='v0'):
+def load_policy_agent(type='SL', version='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    pt_file = torch.load(path + f"\\agents\\AlphaGo_Policy_RL_Agent_{version}.pt")
+    pt_file = torch.load(path + f"\\agents\\AlphaGo_Policy_{type}_Agent_{version}.pt")
     model = pt_file['model']
     encoder_name = pt_file['encoder_name']
     if not isinstance(encoder_name, str):

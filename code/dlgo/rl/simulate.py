@@ -34,16 +34,23 @@ def simulate_game(black_player, white_player):
     )
 
 
-def experience_simulation(num_games, agent1, agent2):
+def experience_simulation(num_games, agent1, agent2, agent3, agent4):
     collector1 = rl.ExperienceCollector()
     collector2 = rl.ExperienceCollector()
+    collector3 = rl.ExperienceCollector()
+    collector4 = rl.ExperienceCollector()
 
     color1 = Player.black
     for i in range(num_games):
+        print('Simulating game %d/%d...' % (i + 1, num_games))
         collector1.begin_episode()
         agent1.set_collector(collector1)
         collector2.begin_episode()
         agent2.set_collector(collector2)
+        collector3.begin_episode()
+        agent3.set_collector(collector3)
+        collector4.begin_episode()
+        agent4.set_collector(collector4)
 
         if color1 == Player.black:
             black_player, white_player = agent1, agent2
@@ -53,9 +60,13 @@ def experience_simulation(num_games, agent1, agent2):
         if game_record.winner == color1:
             collector1.complete_episode(reward=1)
             collector2.complete_episode(reward=-1)
+            collector3.complete_episode(reward=1)
+            collector4.complete_episode(reward=-1)
         else:
             collector2.complete_episode(reward=1)
             collector1.complete_episode(reward=-1)
+            collector4.complete_episode(reward=1)
+            collector3.complete_episode(reward=-1)
         color1 = color1.other
     
     return rl.combine_experience([collector1, collector2])

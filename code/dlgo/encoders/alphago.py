@@ -117,7 +117,6 @@ class AlphaGoEncoder(Encoder):
     def ones(self):
         return np.ones((1, self.board_height, self.board_width))
 
-
     def zeros(self):
         return np.zeros((1, self.board_height, self.board_width))
 

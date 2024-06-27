@@ -13,7 +13,7 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 1000
+    num_games = 100
 
     def compute_acc(argmax, y):
         count = 0
@@ -37,8 +37,8 @@ def main():
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 100
-    pre_trained = False
-    re_train_epoch = 0
+    pre_trained = True
+    re_train_epoch = 22
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
@@ -48,9 +48,11 @@ def main():
     alphago_sl_policy = AlphaGoPolicyResNet().cuda()
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
+        print("initializing...")
     else:
         pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{re_train_epoch}.pt")
         alphago_sl_policy.load_state_dict(pt_flie['model_state_dict'])
+        print("model loading...")
 
     print(alphago_sl_policy)
 
@@ -78,7 +80,7 @@ def main():
             if steps >= total_steps:
                 break
 
-        print('='*100)
+        print('='*50)
         print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
         _, argmax = torch.max(y_, dim=1)
         train_acc = compute_acc(argmax, y)
