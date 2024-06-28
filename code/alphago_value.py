@@ -10,7 +10,7 @@ def main():
 
     alphago_value = ValueAgent(model, encoder)
 
-    winning_exp_buffer, losing_exp_buffer = load_experience(name='0001')
+    winning_exp_buffer, losing_exp_buffer = load_experience(name='0101')
 
     alphago_value.train(
         winning_exp_buffer, losing_exp_buffer,
@@ -18,7 +18,7 @@ def main():
         batch_size=128,
     )
 
-    alphago_value.serialize(version='v0')
+    alphago_value.serialize(version='v1')
 
 
 if __name__ == '__main__':

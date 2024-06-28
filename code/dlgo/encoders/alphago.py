@@ -108,9 +108,9 @@ class AlphaGoEncoder(Encoder):
 
                 if self.use_player_plane:
                     if game_state.next_player == Player.black:
-                        board_tensor[offset("ones")] = self.ones()
+                        board_tensor[offset("current_player_color")] = self.ones()
                     else:
-                        board_tensor[offset("zeros")] = self.zeros()
+                        board_tensor[offset("current_player_color")] = self.zeros()
 
         return board_tensor
 

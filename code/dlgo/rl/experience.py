@@ -29,7 +29,7 @@ class ExperienceCollector:
         self._current_episode_actions = []
         self._current_episode_estimated_values = []
     
-    def record_decision(self, state, action, estimated_value=0):
+    def record_decision(self, state, action=None, estimated_value=0):
         self._current_episode_states.append(state)
         self._current_episode_actions.append(action)
         self._current_episode_estimated_values.append(estimated_value)

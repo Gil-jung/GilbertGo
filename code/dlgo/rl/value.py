@@ -27,7 +27,7 @@ class ValueDataSet(Dataset):
     
     def __getitem__(self, idx):
         states = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
-        rewards = torch.tensor(self.experience.rewards, dtype=torch.long)[idx]
+        rewards = torch.tensor(self.experience.rewards, dtype=torch.float32)[idx]
 
         if self.transform:
             states = self.transform(states)
@@ -136,6 +136,7 @@ class ValueAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self.model(x)
+                y_ = torch.squeeze(y_, dim=1)
                 loss = loss_fn(y_, y.cuda()) 
                 loss.backward()
                 tot_loss += loss.item()
@@ -146,6 +147,7 @@ class ValueAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self.model(x)
+                y_ = torch.squeeze(y_, dim=1)
                 loss = loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()

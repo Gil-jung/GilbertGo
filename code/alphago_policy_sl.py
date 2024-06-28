@@ -13,7 +13,7 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 100
+    num_games = 1000
 
     def compute_acc(argmax, y):
         count = 0
@@ -56,7 +56,7 @@ def main():
 
     print(alphago_sl_policy)
 
-    optimizer = SGD(alphago_sl_policy.parameters())
+    optimizer = SGD(alphago_sl_policy.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss()
     
     total_steps = generator.get_num_samples() // BATCH_SIZE
@@ -99,7 +99,7 @@ def main():
         torch.save({
             'model_state_dict': alphago_sl_policy.state_dict(),
             'loss': loss,
-        }, current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{epoch+1}.pt")
+        }, current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{epoch+1}_v1.pt")
 
 if __name__ == '__main__':
     main()
