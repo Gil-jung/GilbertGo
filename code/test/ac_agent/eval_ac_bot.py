@@ -74,6 +74,8 @@ def main():
 
     agent1 = rl.load_ac_agent(name=args.agent1)
     agent2 = rl.load_ac_agent(name=args.agent2)
+    agent1.model.cuda()
+    agent2.model.cuda()
 
     wins = 0
     losses = 0

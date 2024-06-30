@@ -59,7 +59,7 @@ class ACAgent(Agent):
         num_moves = self.encoder.board_width * self.encoder.board_height
 
         board_tensor = self.encoder.encode(game_state)
-        input_tensor = torch.unsqueeze(torch.tensor(board_tensor, dtype=torch.float32), dim=0)
+        input_tensor = torch.unsqueeze(torch.tensor(np.array(board_tensor), dtype=torch.float32), dim=0)
 
         actions, values = self.predict(input_tensor)
         move_probs = torch.squeeze(actions, dim=0).detach().numpy()

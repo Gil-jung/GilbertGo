@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.optim import SGD
 from torch.utils.data import Dataset, DataLoader
 
-from dlgo import encoders
+from dlgo.encoders.alphago import AlphaGoEncoder
 from dlgo import goboard_fast as goboard
 from dlgo.agent import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
@@ -57,7 +57,7 @@ class ValueAgent(Agent):
         self.policy = policy
     
     def predict(self, input_tensor):
-        return self.model(input_tensor)
+        return self.model(input_tensor.cuda()).cpu()
 
     def select_move(self, game_state):
         
@@ -75,11 +75,11 @@ class ValueAgent(Agent):
             return goboard.Move.pass_turn()
 
         # num_moves = len(moves)
-        board_tensors = torch.tensor(board_tensors, dtype=torch.float32)
+        board_tensors = torch.tensor(np.array(board_tensors), dtype=torch.float32)
 
         # Values of the next state from opponent's view.
         opp_values = self.predict(board_tensors)
-        opp_values = torch.squeeze(opp_values, dim=0).detach().numpy()
+        opp_values = torch.squeeze(opp_values, dim=1).detach().numpy()
 
         # Values from our point of view.
         values = opp_values * (-1)
@@ -181,7 +181,5 @@ def load_value_agent(version='v0'):
         encoder_name = encoder_name.decode('ascii')
     board_width = pt_file['board_width']
     board_height = pt_file['board_height']
-    encoder = encoders.get_encoder_by_name(
-        encoder_name, (board_width, board_height)
-    )
+    encoder = AlphaGoEncoder(use_player_plane=True)
     return ValueAgent(model, encoder)

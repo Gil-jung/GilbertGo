@@ -83,6 +83,8 @@ def main():
 
     agent1 = rl.load_ac_agent(name=learning_agent)
     agent2 = rl.load_ac_agent(name=learning_agent)
+    agent1.model.cuda()
+    agent2.model.cuda()
     # agent1.set_temperature(temperature)
     # agent2.set_temperature(temperature)
     collector1 = rl.ExperienceCollector()

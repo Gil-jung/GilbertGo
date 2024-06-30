@@ -74,6 +74,8 @@ def main():
 
     agent1 = agent.load_policy_agent(name=args.agent1)
     agent2 = agent.load_policy_agent(name=args.agent2)
+    agent1._model.cuda()
+    agent2._model.cuda()
 
     wins = 0
     losses = 0

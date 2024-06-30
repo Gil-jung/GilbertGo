@@ -10,6 +10,7 @@ from dlgo.agent.base import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo import encoders
 from dlgo import goboard_fast as goboard
+from dlgo.rl.experience import ExperienceBuffer
 
 __all__ = [
     'PolicyAgent',
@@ -55,13 +56,13 @@ class PolicyAgent(Agent):
         self._collector = collector
 
     def predict(self, input_tensor):
-        return self._model(input_tensor)
+        return self._model(input_tensor.cuda()).cpu()
 
     def select_move(self, game_state):
         num_moves = self._encoder.board_width * self._encoder.board_height
 
         board_tensor = self._encoder.encode(game_state)
-        input_tensor = torch.unsqueeze(torch.tensor(board_tensor, dtype=torch.float32), dim=0)
+        input_tensor = torch.unsqueeze(torch.tensor(np.array(board_tensor), dtype=torch.float32), dim=0)
 
         if np.random.random() < self._temperature:
             # Explore random moves.
@@ -105,33 +106,58 @@ class PolicyAgent(Agent):
             'model': self._model,
         }, path + f"\\agents\\AlphaGo_Policy_{type}_Agent_{version}.pt")
 
-    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0000001, clipnorm=1.0, batch_size=512):
-        winning_exp_dataset = ExperienceDataSet(winning_exp_buffer)
-        winning_exp_loader = DataLoader(winning_exp_dataset, batch_size=batch_size)
-        losing_exp_dataset = ExperienceDataSet(losing_exp_buffer)
-        losing_exp_loader = DataLoader(losing_exp_dataset, batch_size=batch_size)
+    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0001, clipnorm=1.0, batch_size=128):
+        path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+        pivot = int(len(winning_exp_buffer.states) * 0.8)
+        version='test'
+        
+        winning_train_buffer = ExperienceBuffer(
+            winning_exp_buffer.states[:pivot],
+            winning_exp_buffer.actions[:pivot],
+            winning_exp_buffer.rewards[:pivot],
+            []
+        )
+        losing_train_buffer = ExperienceBuffer(
+            losing_exp_buffer.states[:pivot],
+            losing_exp_buffer.actions[:pivot],
+            losing_exp_buffer.rewards[:pivot],
+            []
+        )
+        winning_test_buffer = ExperienceBuffer(
+            winning_exp_buffer.states[pivot:],
+            winning_exp_buffer.actions[pivot:],
+            winning_exp_buffer.rewards[pivot:],
+            []
+        )
+        losing_test_buffer = ExperienceBuffer(
+            losing_exp_buffer.states[pivot:],
+            losing_exp_buffer.actions[pivot:],
+            losing_exp_buffer.rewards[pivot:],
+            []
+        )
+
+        winning_train_dataset = ExperienceDataSet(winning_train_buffer)
+        losing_train_dataset = ExperienceDataSet(losing_train_buffer)
+        winning_test_dataset = ExperienceDataSet(winning_test_buffer)
+        losing_test_dataset = ExperienceDataSet(losing_test_buffer)
+
+        winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
+        losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
+        winning_test_loader = DataLoader(winning_test_dataset, batch_size=batch_size, shuffle=True)
+        losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
+
         optimizer = SGD(self._model.parameters(), lr=lr)
         loss_fn = nn.CrossEntropyLoss()
-        NUM_EPOCHES = 5
+        NUM_EPOCHES = 100
         self._model.cuda()
+        total_steps = pivot // batch_size
 
         for epoch in range(NUM_EPOCHES):
             self._model.train()
             tot_loss = 0.0
             steps = 0
 
-            for x, y in winning_exp_loader:
-                steps += 1
-                optimizer.zero_grad()
-                x = x.cuda()
-                y_ = self._model(x)
-                loss = loss_fn(y_, y.cuda()) 
-                loss.backward()
-                tot_loss += loss.item()
-                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
-                optimizer.step()
-
-            for x, y in losing_exp_loader:
+            for x, y in losing_train_loader:
                 steps += 1
                 optimizer.zero_grad()
                 x = x.cuda()
@@ -139,11 +165,54 @@ class PolicyAgent(Agent):
                 loss = 1 - loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
-                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                # nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
                 optimizer.step()
 
-            print('='*100)
+                if steps >= total_steps // 2:
+                    break
+            
+            for x, y in winning_train_loader:
+                steps += 1
+                optimizer.zero_grad()
+                x = x.cuda()
+                y_ = self._model(x)
+                loss = loss_fn(y_, y.cuda()) 
+                loss.backward()
+                tot_loss += loss.item()
+                # nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                optimizer.step()
+
+                if steps >= total_steps:
+                    break
+
+            print('='*50)
             print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
+            _, argmax = torch.max(y_, dim=1)
+            train_acc = compute_acc(argmax, y)
+            print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
+
+            self._model.eval()
+            eval_loss = 0
+            x, y = next(iter(losing_test_loader))
+            x = x.cuda()
+            y_ = self._model(x)
+            loss = loss_fn(y_, y.cuda()) 
+            eval_loss += loss.item()
+            x, y = next(iter(winning_test_loader))
+            x = x.cuda()
+            y_ = self._model(x)
+            loss = loss_fn(y_, y.cuda()) 
+            eval_loss += loss.item()
+            eval_loss /= 2
+            print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
+            _, argmax = torch.max(y_, dim=1)
+            test_acc = compute_acc(argmax, y)
+            print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
+
+            torch.save({
+                'model_state_dict': self._model.state_dict(),
+                'loss': eval_loss,
+            }, path + f"\\checkpoints\\alphago_rl_policy_epoch_{epoch+1}_v{version}.pt")
 
         self._model.cpu()
 
@@ -161,3 +230,10 @@ def load_policy_agent(type='SL', version='v0'):
         encoder_name, (board_width, board_height)
     )
     return PolicyAgent(model, encoder)
+
+def compute_acc(argmax, y):
+        count = 0
+        for i in range(len(argmax)):
+            if argmax[i] == y[i]:
+                count += 1
+        return count / len(argmax)

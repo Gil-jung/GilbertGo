@@ -80,6 +80,8 @@ def main():
 
     agent1 = agent.load_policy_agent(name=args.learning_agent)
     agent2 = agent.load_policy_agent(name=args.learning_agent)
+    agent1._model.cuda()
+    agent2._model.cuda()
     agent1.set_temperature(args.temperature)
     agent2.set_temperature(args.temperature)
 

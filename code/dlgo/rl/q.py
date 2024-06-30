@@ -55,8 +55,11 @@ class QAgent(Agent):
     def set_collector(self, collector):
         self.collector = collector
     
+    # def predict(self, input_tensor):
+    #     return self.model(input_tensor)
+
     def predict(self, input_tensor):
-        return self.model(input_tensor)
+        return self.model((input_tensor[0].cuda(), input_tensor[1].cuda())).cpu()
 
     def select_move(self, game_state):
         board_tensor = self.encoder.encode(game_state)
@@ -72,7 +75,7 @@ class QAgent(Agent):
             return goboard.Move.pass_turn()
 
         num_moves = len(moves)
-        board_tensors = torch.tensor(board_tensors, dtype=torch.float32)
+        board_tensors = torch.tensor(np.array(board_tensors), dtype=torch.float32)
         move_vectors = torch.zeros((num_moves, self.encoder.num_points()), dtype=torch.float32)
         for i, move in enumerate(moves):
             move_vectors[i][move] = 1
