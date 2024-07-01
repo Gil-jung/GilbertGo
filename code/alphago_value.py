@@ -10,7 +10,7 @@ def main():
 
     alphago_value = ValueAgent(model, encoder)
 
-    winning_exp_buffer, losing_exp_buffer = load_experience(name='0101')
+    winning_exp_buffer, losing_exp_buffer = load_experience(name='value')
 
     alphago_value.train(
         winning_exp_buffer, losing_exp_buffer,

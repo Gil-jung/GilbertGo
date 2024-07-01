@@ -38,8 +38,8 @@ def main():
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 100
     pre_trained = True
-    re_train_epoch = 32
-    version = 1
+    # re_train_epoch = 32
+    version = 3
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
@@ -51,7 +51,8 @@ def main():
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")
     else:
-        pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{re_train_epoch}_v{version}.pt")
+        # pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{re_train_epoch}_v{version}.pt")
+        pt_flie = torch.load(current_path + f"\\agents\\AlphaGo_Policy_SL_Agent_v{version}.pt")
         alphago_sl_policy.load_state_dict(pt_flie['model_state_dict'])
         print("model loading...")
 

@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent.base import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
-from dlgo import encoders
+from dlgo.encoders.base import get_encoder_by_name
 from dlgo import goboard_fast as goboard
 from dlgo.rl.experience import ExperienceBuffer
 
@@ -18,22 +18,31 @@ __all__ = [
 ]
 
 
-def normalize(x):
-    total = np.sum(x)
-    return x / total
-
-
 class ExperienceDataSet(Dataset):
     def __init__(self, experience, transform=None):
-        self.experience = experience
+        # self.experience = experience
         self.transform = transform
+
+        states = np.concatenate((experience.states, np.rot90(experience.states, 1, (2, 3))))
+        states = np.concatenate((states, np.flip(experience.states, axis=2)))
+        states = np.concatenate((states, np.rot90(np.flip(experience.states, axis=2), 1, (2, 3))))
+        states = np.concatenate((states, np.flip(experience.states, axis=3)))
+        states = np.concatenate((states, np.rot90(np.flip(experience.states, axis=3), 1, (2, 3))))
+        states = np.concatenate((states, np.flip(np.flip(experience.states, axis=3), axis=2)))
+        states = np.concatenate((states, np.rot90(np.flip(np.flip(experience.states, axis=3), axis=2), 1, (2, 3))))
+        actions = np.concatenate((experience.actions, experience.actions))
+        actions = np.concatenate((actions, actions))
+        actions = np.concatenate((actions, actions))
+        
+        self.states = states
+        self.actions = actions
     
     def __len__(self):
-        return len(self.experience.states)
+        return len(self.states)
     
     def __getitem__(self, idx):
-        X = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
-        y = torch.tensor(self.experience.actions, dtype=torch.long)[idx]
+        X = torch.tensor(self.states, dtype=torch.float32)[idx]
+        y = torch.tensor(self.actions, dtype=torch.long)[idx]
 
         if self.transform:
             X = self.transform(X)
@@ -226,7 +235,7 @@ def load_policy_agent(type='SL', version='v0'):
         encoder_name = encoder_name.decode('ascii')
     board_width = pt_file['board_width']
     board_height = pt_file['board_height']
-    encoder = encoders.get_encoder_by_name(
+    encoder = get_encoder_by_name(
         encoder_name, (board_width, board_height)
     )
     return PolicyAgent(model, encoder)
