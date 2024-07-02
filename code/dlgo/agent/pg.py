@@ -1,5 +1,6 @@
 """Policy gradient learning."""
 import os
+import glob
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,7 +11,7 @@ from dlgo.agent.base import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo.encoders.base import get_encoder_by_name
 from dlgo import goboard_fast as goboard
-from dlgo.rl.experience import ExperienceBuffer
+from dlgo.rl.experience import ExperienceBuffer, load_experience
 
 __all__ = [
     'PolicyAgent',
@@ -19,33 +20,22 @@ __all__ = [
 
 
 class ExperienceDataSet(Dataset):
-    def __init__(self, experience, transform=None):
-        # self.experience = experience
+    def __init__(self, experiencebuffers, transform=None):
+        self.experiencebuffers = experiencebuffers
         self.transform = transform
-
-        states = np.concatenate((experience.states, np.rot90(experience.states, 1, (2, 3))))
-        states = np.concatenate((states, np.flip(experience.states, axis=2)))
-        states = np.concatenate((states, np.rot90(np.flip(experience.states, axis=2), 1, (2, 3))))
-        states = np.concatenate((states, np.flip(experience.states, axis=3)))
-        states = np.concatenate((states, np.rot90(np.flip(experience.states, axis=3), 1, (2, 3))))
-        states = np.concatenate((states, np.flip(np.flip(experience.states, axis=3), axis=2)))
-        states = np.concatenate((states, np.rot90(np.flip(np.flip(experience.states, axis=3), axis=2), 1, (2, 3))))
-        actions = np.concatenate((experience.actions, experience.actions))
-        actions = np.concatenate((actions, actions))
-        actions = np.concatenate((actions, actions))
-        
-        self.states = states
-        self.actions = actions
     
     def __len__(self):
-        return len(self.states)
+        return (len(self.experiencebuffers) - 1) * 1024 + len(self.experiencebuffers[-1].actions)
     
     def __getitem__(self, idx):
-        X = torch.tensor(self.states, dtype=torch.float32)[idx]
-        y = torch.tensor(self.actions, dtype=torch.long)[idx]
+        div = idx // 1024
+        mod = idx % 1024
+
+        X = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
+        y = torch.tensor(self.experiencebuffers[div].actions[mod], dtype=torch.long)
 
         if self.transform:
-            X = self.transform(X)
+            X = self.transform(X, idx)
 
         return X, y
 
@@ -115,40 +105,32 @@ class PolicyAgent(Agent):
             'model': self._model,
         }, path + f"\\agents\\AlphaGo_Policy_{type}_Agent_{version}.pt")
 
-    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.0001, clipnorm=1.0, batch_size=128):
+    def train(self, lr=0.0001, clipnorm=1.0, batch_size=128):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-        pivot = int(len(winning_exp_buffer.states) * 0.8)
         version='test'
-        
-        winning_train_buffer = ExperienceBuffer(
-            winning_exp_buffer.states[:pivot],
-            winning_exp_buffer.actions[:pivot],
-            winning_exp_buffer.rewards[:pivot],
-            []
-        )
-        losing_train_buffer = ExperienceBuffer(
-            losing_exp_buffer.states[:pivot],
-            losing_exp_buffer.actions[:pivot],
-            losing_exp_buffer.rewards[:pivot],
-            []
-        )
-        winning_test_buffer = ExperienceBuffer(
-            winning_exp_buffer.states[pivot:],
-            winning_exp_buffer.actions[pivot:],
-            winning_exp_buffer.rewards[pivot:],
-            []
-        )
-        losing_test_buffer = ExperienceBuffer(
-            losing_exp_buffer.states[pivot:],
-            losing_exp_buffer.actions[pivot:],
-            losing_exp_buffer.rewards[pivot:],
-            []
-        )
+        base = path + f"\\buffers\\winning_experiences_policy_*.pt"
+        files_num = len(glob.glob(base))
+        pivot = int(files_num * 0.8)
 
-        winning_train_dataset = ExperienceDataSet(winning_train_buffer)
-        losing_train_dataset = ExperienceDataSet(losing_train_buffer)
-        winning_test_dataset = ExperienceDataSet(winning_test_buffer)
-        losing_test_dataset = ExperienceDataSet(losing_test_buffer)
+        winning_train_buffers = []
+        losing_train_buffers = []
+        winning_test_buffers = []
+        losing_test_buffers = []
+
+        for idx in range(files_num):
+            if idx < pivot:
+                winning_train_buffer, losing_train_buffer = load_experience(name=f'policy_{idx}')
+                winning_train_buffers.append(winning_train_buffer)
+                losing_train_buffers.append(losing_train_buffer)
+            else:
+                winning_test_buffer, losing_test_buffer = load_experience(name=f'policy_{idx}')
+                winning_test_buffers.append(winning_test_buffer)
+                losing_test_buffers.append(losing_test_buffer)
+
+        winning_train_dataset = ExperienceDataSet(winning_train_buffers, transform=None)
+        losing_train_dataset = ExperienceDataSet(losing_train_buffers, transform=None)
+        winning_test_dataset = ExperienceDataSet(winning_test_buffers, transform=None)
+        losing_test_dataset = ExperienceDataSet(losing_test_buffers, transform=None)
 
         winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
         losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
@@ -159,7 +141,7 @@ class PolicyAgent(Agent):
         loss_fn = nn.CrossEntropyLoss()
         NUM_EPOCHES = 100
         self._model.cuda()
-        total_steps = pivot // batch_size
+        total_steps = len(winning_train_dataset) // batch_size
 
         for epoch in range(NUM_EPOCHES):
             self._model.train()
@@ -174,7 +156,7 @@ class PolicyAgent(Agent):
                 loss = 1 - loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
-                # nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
                 optimizer.step()
 
                 if steps >= total_steps // 2:
@@ -188,7 +170,7 @@ class PolicyAgent(Agent):
                 loss = loss_fn(y_, y.cuda()) 
                 loss.backward()
                 tot_loss += loss.item()
-                # nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
+                nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
                 optimizer.step()
 
                 if steps >= total_steps:
@@ -246,3 +228,21 @@ def compute_acc(argmax, y):
             if argmax[i] == y[i]:
                 count += 1
         return count / len(argmax)
+
+def trans_board(state, idx):
+    if idx % 8 == 0:
+        return state
+    elif idx % 8 == 1:
+        return np.rot90(state, 1, (1, 2))
+    elif idx % 8 == 2:
+        return np.flip(state, axis=1)
+    elif idx % 8 == 3:
+        return np.rot90(np.flip(state, axis=1), 1, (1, 2))
+    elif idx % 8 == 4:
+        return np.flip(state, axis=2)
+    elif idx % 8 == 5:
+        return np.rot90(np.flip(state, axis=2), 1, (1, 2))
+    elif idx % 8 == 6:
+        return np.flip(np.flip(state, axis=2), axis=1)
+    elif idx % 8 == 7:
+        return np.rot90(np.flip(np.flip(state, axis=2), axis=1), 1, (1, 2))

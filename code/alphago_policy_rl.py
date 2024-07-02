@@ -19,20 +19,85 @@ def main():
     value_agent1 = ValueAgent(model, encoder)
     value_agent2 = ValueAgent(model, encoder)
 
-    num_games = 6
+    num_games = 10
     policy_exp_buffer, value_exp_buffer = experience_simulation(
         num_games, alphago_rl_agent, opponent, value_agent1, value_agent2
     )
+    
+    winning_policy_states = policy_exp_buffer[0].states
+    winning_policy_actions = policy_exp_buffer[0].actions
+    losing_policy_states = policy_exp_buffer[1].states
+    losing_policy_actions = policy_exp_buffer[1].actions
+    winning_value_states = value_exp_buffer[0].states
+    winning_value_rewards = value_exp_buffer[0].rewards
+    losing_value_states = value_exp_buffer[1].states
+    losing_value_rewards = value_exp_buffer[1].rewards
+    
+    chunk = 0
+    chunk_size = 1024
+    while len(winning_policy_actions) >= chunk_size:
+        current_winning_policy_states, winning_policy_states = winning_policy_states[:chunk_size], winning_policy_states[chunk_size:]
+        current_winning_policy_actions, winning_policy_actions = winning_policy_actions[:chunk_size], winning_policy_actions[chunk_size:]
+        current_losing_policy_states, losing_policy_states = losing_policy_states[:chunk_size], losing_policy_states[chunk_size:]
+        current_losing_policy_actions, losing_policy_actions = losing_policy_actions[:chunk_size], losing_policy_actions[chunk_size:]
+        current_winning_value_states, winning_value_states = winning_value_states[:chunk_size], winning_value_states[chunk_size:]
+        current_winning_value_rewards, winning_value_rewards = winning_value_rewards[:chunk_size], winning_value_rewards[chunk_size:]
+        current_losing_value_states, losing_value_states = losing_value_states[:chunk_size], losing_value_states[chunk_size:]
+        current_losing_value_rewards, losing_value_rewards = losing_value_rewards[:chunk_size], losing_value_rewards[chunk_size:]
 
-    policy_exp_buffer[0].serialize(result='winning', name='policy_test')
-    policy_exp_buffer[1].serialize(result='losing', name='policy_test')
-    value_exp_buffer[0].serialize(result='winning', name='value_test')
-    value_exp_buffer[1].serialize(result='losing', name='value_test')
+        ExperienceBuffer(
+            current_winning_policy_states,
+            current_winning_policy_actions,
+            [],
+            []
+        ).serialize(result="winning", name=f'policy_{chunk}')
+        ExperienceBuffer(
+            current_losing_policy_states,
+            current_losing_policy_actions,
+            [],
+            []
+        ).serialize(result="losing", name=f'policy_{chunk}')
+        ExperienceBuffer(
+            current_winning_value_states,
+            [],
+            current_winning_value_rewards,
+            []
+        ).serialize(result="winning", name=f'value_{chunk}')
+        ExperienceBuffer(
+            current_losing_value_states,
+            [],
+            current_losing_value_rewards,
+            []
+        ).serialize(result="losing", name=f'value_{chunk}')
 
-    policy_winning_buffer, policy_losing_buffer = load_experience(name='policy_test')
+        chunk += 1
+    
+    ExperienceBuffer(
+        winning_policy_states,
+        winning_policy_actions,
+        [],
+        []
+    ).serialize(result="winning", name=f'policy_{chunk}')
+    ExperienceBuffer(
+        losing_policy_states,
+        losing_policy_actions,
+        [],
+        []
+    ).serialize(result="losing", name=f'policy_{chunk}')
+    ExperienceBuffer(
+        winning_value_states,
+        [],
+        winning_value_rewards,
+        []
+    ).serialize(result="winning", name=f'value_{chunk}')
+    ExperienceBuffer(
+        losing_value_states,
+        [],
+        losing_value_rewards,
+        []
+    ).serialize(result="losing", name=f'value_{chunk}')
 
     alphago_rl_agent.train(
-        policy_winning_buffer, policy_losing_buffer,
         lr=0.001,
         clipnorm=1.0,
         batch_size=128
