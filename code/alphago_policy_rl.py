@@ -3,7 +3,7 @@ from dlgo.encoders.alphago import AlphaGoEncoder
 from dlgo.networks.alphago import AlphaGoValueResNet
 from dlgo.rl.simulate import experience_simulation
 from dlgo.rl.value import ValueAgent
-from dlgo.rl.experience import ExperienceBuffer, load_experience
+from dlgo.rl.experience import ExperienceBuffer
 
 import numpy as np
 

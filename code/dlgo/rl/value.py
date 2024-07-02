@@ -1,4 +1,4 @@
-import os
+import os, glob, random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,6 +9,7 @@ from dlgo.encoders.alphago import AlphaGoEncoder
 from dlgo import goboard_fast as goboard
 from dlgo.agent import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
+from dlgo.rl.experience import load_experience
 
 __all__ = [
     'ValueAgent',
@@ -17,22 +18,24 @@ __all__ = [
 
 
 class ValueDataSet(Dataset):
-    def __init__(self, experience, num_moves=19*19, transform=None):
-        self.experience = experience
+    def __init__(self, experiencebuffers, transform=None):
+        self.experiencebuffers = experiencebuffers
         self.transform = transform
-        self.num_moves = num_moves
     
     def __len__(self):
-        return len(self.experience.states)
+        return (len(self.experiencebuffers) - 1) * 1024 + len(self.experiencebuffers[-1].rewards)
     
     def __getitem__(self, idx):
-        states = torch.tensor(self.experience.states, dtype=torch.float32)[idx]
-        rewards = torch.tensor(self.experience.rewards, dtype=torch.float32)[idx]
+        div = idx // 1024
+        mod = idx % 1024
+
+        X = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
+        y = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.long)
 
         if self.transform:
-            states = self.transform(states)
+            X = self.transform(X)
 
-        return states, rewards
+        return X, y
 
 
 class ValueAgent(Agent):
@@ -116,22 +119,50 @@ class ValueAgent(Agent):
         p = p / np.sum(p)
         return np.random.choice(np.arange(0, len(values)), size=len(values), p=p, replace=False)
     
-    def train(self, winning_exp_buffer, losing_exp_buffer, lr=0.1, batch_size=128):
-        winning_exp_dataset = ValueDataSet(winning_exp_buffer, num_moves=self.encoder.num_points())
-        winning_exp_loader = DataLoader(winning_exp_dataset, batch_size=batch_size)
-        losing_exp_dataset = ValueDataSet(losing_exp_buffer, num_moves=self.encoder.num_points())
-        losing_exp_loader = DataLoader(losing_exp_dataset, batch_size=batch_size)
+    def train(self, lr=0.1, batch_size=128):
+        path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+        version = 0
+        base = path + f"\\buffers\\winning_experiences_value_*.pt"
+        files_num = len(glob.glob(base))
+        pivot = int(files_num * 0.8)
+
+        winning_train_buffers = []
+        losing_train_buffers = []
+        winning_test_buffers = []
+        losing_test_buffers = []
+        
+        for idx in range(files_num):
+            if idx < pivot:
+                winning_train_buffer, losing_train_buffer = load_experience(name=f'value_{idx}')
+                winning_train_buffers.append(winning_train_buffer)
+                losing_train_buffers.append(losing_train_buffer)
+            else:
+                winning_test_buffer, losing_test_buffer = load_experience(name=f'value_{idx}')
+                winning_test_buffers.append(winning_test_buffer)
+                losing_test_buffers.append(losing_test_buffer)
+
+        winning_train_dataset = ValueDataSet(winning_train_buffers, transform=None)
+        losing_train_dataset = ValueDataSet(losing_train_buffers, transform=None)
+        winning_test_dataset = ValueDataSet(winning_test_buffers, transform=None)
+        losing_test_dataset = ValueDataSet(losing_test_buffers, transform=None)
+
+        winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
+        losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
+        winning_test_loader = DataLoader(winning_test_dataset, batch_size=batch_size, shuffle=True)
+        losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
+
         optimizer = SGD(self.model.parameters(), lr=lr)
         loss_fn = nn.MSELoss()
-        NUM_EPOCHES = 5
+        NUM_EPOCHES = 100
         self.model.cuda()
+        total_steps = len(winning_train_dataset) // batch_size * 8
 
         for epoch in range(NUM_EPOCHES):
             self.model.train()
             tot_loss = 0.0
             steps = 0
 
-            for x, y in winning_exp_loader:
+            for x, y in losing_train_loader:
                 steps += 1
                 optimizer.zero_grad()
                 x = x.cuda()
@@ -142,7 +173,10 @@ class ValueAgent(Agent):
                 tot_loss += loss.item()
                 optimizer.step()
 
-            for x, y in losing_exp_loader:
+                if steps >= total_steps // 2:
+                    break
+
+            for x, y in winning_train_loader:
                 steps += 1
                 optimizer.zero_grad()
                 x = x.cuda()
@@ -153,8 +187,39 @@ class ValueAgent(Agent):
                 tot_loss += loss.item()
                 optimizer.step()
 
-            print('='*100)
+                if steps >= total_steps:
+                    break
+
+            print('='*50)
             print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
+            _, argmax = torch.max(y_, dim=1)
+            train_acc = compute_acc(argmax, y)
+            print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
+
+            self._model.eval()
+            eval_loss = 0
+            x, y = next(iter(losing_test_loader))
+            x = x.cuda()
+            y_ = self._model(x)
+            y_ = torch.squeeze(y_, dim=1)
+            loss = loss_fn(y_, y.cuda())
+            eval_loss += loss.item()
+            x, y = next(iter(winning_test_loader))
+            x = x.cuda()
+            y_ = self._model(x)
+            y_ = torch.squeeze(y_, dim=1)
+            loss = loss_fn(y_, y.cuda()) 
+            eval_loss += loss.item()
+            eval_loss /= 2
+            print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
+            _, argmax = torch.max(y_, dim=1)
+            test_acc = compute_acc(argmax, y)
+            print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
+
+            torch.save({
+                'model_state_dict': self._model.state_dict(),
+                'loss': eval_loss,
+            }, path + f"\\checkpoints\\alphago_rl_value_epoch_{epoch+1}_v{version}.pt")
 
         self.model.cpu()
     
@@ -183,3 +248,28 @@ def load_value_agent(version='v0'):
     board_height = pt_file['board_height']
     encoder = AlphaGoEncoder(use_player_plane=True)
     return ValueAgent(model, encoder)
+
+def compute_acc(argmax, y):
+        count = 0
+        for i in range(len(argmax)):
+            if argmax[i] == y[i]:
+                count += 1
+        return count / len(argmax)
+
+def trans_board(state):
+    if random.randint(0, 7) == 0:
+        return state
+    elif random.randint(0, 7) == 1:
+        return torch.rot90(state, k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 2:
+        return torch.flip(state, dims=[1])
+    elif random.randint(0, 7) == 3:
+        return torch.rot90(torch.flip(state, dims=[1]), k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 4:
+        return torch.flip(state, dims=[2])
+    elif random.randint(0, 7) == 5:
+        return torch.rot90(torch.flip(state, dims=[2]), k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 6:
+        return torch.flip(torch.flip(state, dims=[2]), dims=[1])
+    elif random.randint(0, 7) == 7:
+        return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])

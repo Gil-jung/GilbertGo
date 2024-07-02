@@ -1,6 +1,5 @@
 """Policy gradient learning."""
-import os
-import glob
+import os, glob, random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -11,7 +10,7 @@ from dlgo.agent.base import Agent
 from dlgo.agent.helpers_fast import is_point_an_eye
 from dlgo.encoders.base import get_encoder_by_name
 from dlgo import goboard_fast as goboard
-from dlgo.rl.experience import ExperienceBuffer, load_experience
+from dlgo.rl.experience import load_experience
 
 __all__ = [
     'PolicyAgent',
@@ -35,7 +34,7 @@ class ExperienceDataSet(Dataset):
         y = torch.tensor(self.experiencebuffers[div].actions[mod], dtype=torch.long)
 
         if self.transform:
-            X = self.transform(X, idx)
+            X = self.transform(X)
 
         return X, y
 
@@ -107,9 +106,10 @@ class PolicyAgent(Agent):
 
     def train(self, lr=0.0001, clipnorm=1.0, batch_size=128):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-        version='test'
+        version = 0
         base = path + f"\\buffers\\winning_experiences_policy_*.pt"
         files_num = len(glob.glob(base))
+        print(files_num)
         pivot = int(files_num * 0.8)
 
         winning_train_buffers = []
@@ -127,10 +127,10 @@ class PolicyAgent(Agent):
                 winning_test_buffers.append(winning_test_buffer)
                 losing_test_buffers.append(losing_test_buffer)
 
-        winning_train_dataset = ExperienceDataSet(winning_train_buffers, transform=None)
-        losing_train_dataset = ExperienceDataSet(losing_train_buffers, transform=None)
-        winning_test_dataset = ExperienceDataSet(winning_test_buffers, transform=None)
-        losing_test_dataset = ExperienceDataSet(losing_test_buffers, transform=None)
+        winning_train_dataset = ExperienceDataSet(winning_train_buffers, transform=trans_board)
+        losing_train_dataset = ExperienceDataSet(losing_train_buffers, transform=trans_board)
+        winning_test_dataset = ExperienceDataSet(winning_test_buffers, transform=trans_board)
+        losing_test_dataset = ExperienceDataSet(losing_test_buffers, transform=trans_board)
 
         winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
         losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
@@ -141,7 +141,8 @@ class PolicyAgent(Agent):
         loss_fn = nn.CrossEntropyLoss()
         NUM_EPOCHES = 100
         self._model.cuda()
-        total_steps = len(winning_train_dataset) // batch_size
+        print(winning_train_dataset)
+        total_steps = len(winning_train_dataset) // batch_size * 8
 
         for epoch in range(NUM_EPOCHES):
             self._model.train()
@@ -187,7 +188,7 @@ class PolicyAgent(Agent):
             x, y = next(iter(losing_test_loader))
             x = x.cuda()
             y_ = self._model(x)
-            loss = loss_fn(y_, y.cuda()) 
+            loss = 1 - loss_fn(y_, y.cuda()) 
             eval_loss += loss.item()
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
@@ -229,20 +230,20 @@ def compute_acc(argmax, y):
                 count += 1
         return count / len(argmax)
 
-def trans_board(state, idx):
-    if idx % 8 == 0:
+def trans_board(state):
+    if random.randint(0, 7) == 0:
         return state
-    elif idx % 8 == 1:
-        return np.rot90(state, 1, (1, 2))
-    elif idx % 8 == 2:
-        return np.flip(state, axis=1)
-    elif idx % 8 == 3:
-        return np.rot90(np.flip(state, axis=1), 1, (1, 2))
-    elif idx % 8 == 4:
-        return np.flip(state, axis=2)
-    elif idx % 8 == 5:
-        return np.rot90(np.flip(state, axis=2), 1, (1, 2))
-    elif idx % 8 == 6:
-        return np.flip(np.flip(state, axis=2), axis=1)
-    elif idx % 8 == 7:
-        return np.rot90(np.flip(np.flip(state, axis=2), axis=1), 1, (1, 2))
+    elif random.randint(0, 7) == 1:
+        return torch.rot90(state, k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 2:
+        return torch.flip(state, dims=[1])
+    elif random.randint(0, 7) == 3:
+        return torch.rot90(torch.flip(state, dims=[1]), k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 4:
+        return torch.flip(state, dims=[2])
+    elif random.randint(0, 7) == 5:
+        return torch.rot90(torch.flip(state, dims=[2]), k=1, dims=[1, 2])
+    elif random.randint(0, 7) == 6:
+        return torch.flip(torch.flip(state, dims=[2]), dims=[1])
+    elif random.randint(0, 7) == 7:
+        return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])
