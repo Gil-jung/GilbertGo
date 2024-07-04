@@ -39,8 +39,9 @@ class Sampler:
 
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
-            year = int(filename.split('-')[1].split('_')[0])
-            if year > self.cap_year:
+            # year = int(filename.split('-')[1].split('_')[0])
+            year = int(filename.split('-')[1])
+            if year != self.cap_year:
                 continue
             num_games = fileinfo['num_games']
             for i in range(num_games):
@@ -62,8 +63,9 @@ class Sampler:
         index = KGSIndex(data_directory=self.data_dir)
         for file_info in index.file_info:
             filename = file_info['filename']
-            year = int(filename.split('-')[1].split('_')[0])
-            if year > self.cap_year:
+            # year = int(filename.split('-')[1].split('_')[0])
+            year = int(filename.split('-')[1])
+            if year != self.cap_year:
                 continue
             num_games = file_info['num_games']
             for i in range(num_games):
@@ -95,8 +97,9 @@ class Sampler:
         index = KGSIndex(data_directory=self.data_dir)
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
-            year = int(filename.split('-')[1].split('_')[0])
-            if year > self.cap_year:
+            # year = int(filename.split('-')[1].split('_')[0])
+            year = int(filename.split('-')[1])
+            if year != self.cap_year:
                 continue
             num_games = fileinfo['num_games']
             for i in range(num_games):
@@ -118,8 +121,9 @@ class Sampler:
 
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
-            year = int(filename.split('-')[1].split('_')[0])
-            if year > self.cap_year:
+            # year = int(filename.split('-')[1].split('_')[0])
+            year = int(filename.split('-')[1])
+            if year != self.cap_year:
                 continue
             if 'num_games' in fileinfo.keys():
                 num_games = fileinfo['num_games']

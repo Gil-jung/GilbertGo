@@ -13,7 +13,7 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 1000
+    num_games = 1255
 
     def compute_acc(argmax, y):
         count = 0
@@ -38,20 +38,18 @@ def main():
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 100
     pre_trained = True
-    # re_train_epoch = 32
-    version = 3
+    version = 0
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data('train', num_games, use_generator=True)
-    test_generator = processor.load_go_data('test', num_games, use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year='2019_04', use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year='2019_04', use_generator=True)
 
     alphago_sl_policy = AlphaGoPolicyResNet().cuda()
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")
     else:
-        # pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{re_train_epoch}_v{version}.pt")
         pt_flie = torch.load(current_path + f"\\agents\\AlphaGo_Policy_SL_Agent_v{version}.pt")
         alphago_sl_policy.load_state_dict(pt_flie['model_state_dict'])
         print("model loading...")

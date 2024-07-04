@@ -99,19 +99,13 @@ def combine_experience(collectors):
     )
 
 
-def load_experience(name):
+def load_experience(result="winning", type="policy", no=0):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-    winning_pt_file = torch.load(path + f"\\buffers\\winning_experiences_{name}.pt")
-    losing_pt_file = torch.load(path + f"\\buffers\\losing_experiences_{name}.pt")
+    pt_file = torch.load(path + f"\\buffers\\{result}_experiences_{type}_{no}.pt")
     
     return ExperienceBuffer(
-        states=np.array(winning_pt_file['states']),
-        actions=np.array(winning_pt_file['actions']),
-        rewards=np.array(winning_pt_file['rewards']),
-        advantages=np.array(winning_pt_file['advantages'])
-    ), ExperienceBuffer(
-        states=np.array(losing_pt_file['states']),
-        actions=np.array(losing_pt_file['actions']),
-        rewards=np.array(losing_pt_file['rewards']),
-        advantages=np.array(losing_pt_file['advantages'])
+        states=np.array(pt_file['states']),
+        actions=np.array(pt_file['actions']),
+        rewards=np.array(pt_file['rewards']),
+        advantages=np.array(pt_file['advantages'])
     )

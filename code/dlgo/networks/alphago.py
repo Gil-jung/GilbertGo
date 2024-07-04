@@ -76,6 +76,7 @@ class AlphaGoPolicyNet(nn.Module):
 
         self.layer12 = nn.Sequential(
             nn.Conv2d(in_channels=192, out_channels=1, kernel_size=1, padding=0, bias=False),
+            # nn.Softmax2d()
         )
 
     def forward(self, x):
@@ -172,6 +173,7 @@ class AlphaGoPolicyResNet(nn.Module):
 
         self.layer12 = nn.Sequential(
             nn.Conv2d(in_channels=192, out_channels=1, kernel_size=1, padding=0, bias=False),
+            # nn.Softmax2d()
         )
 
     def forward(self, x):

@@ -5,8 +5,6 @@ from dlgo.rl.simulate import experience_simulation
 from dlgo.rl.value import ValueAgent
 from dlgo.rl.experience import ExperienceBuffer
 
-import numpy as np
-
 
 def main():
     alphago_rl_agent = load_policy_agent(type='SL', version='v0')
@@ -19,7 +17,7 @@ def main():
     value_agent1 = ValueAgent(model, encoder)
     value_agent2 = ValueAgent(model, encoder)
 
-    num_games = 10
+    num_games = 128
     policy_exp_buffer, value_exp_buffer = experience_simulation(
         num_games, alphago_rl_agent, opponent, value_agent1, value_agent2
     )

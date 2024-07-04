@@ -33,11 +33,11 @@ class GoDataProcessor:
         self.encoder = get_encoder_by_name(encoder, 19)
         self.data_dir = data_directory
     
-    def load_go_data(self, data_type='train', num_samples=1000, use_generator=False):
+    def load_go_data(self, data_type='train', num_samples=None, cap_year=None, use_generator=False):
         index = KGSIndex(data_directory=self.data_dir)
         index.download_files()
 
-        sampler = Sampler(data_dir=self.data_dir)
+        sampler = Sampler(data_dir=self.data_dir, cap_year=cap_year)
         data = sampler.draw_data(data_type, num_samples)
 
         self.map_to_workers(data_type, data)  # Map workload to CPUs

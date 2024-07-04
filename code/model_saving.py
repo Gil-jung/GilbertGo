@@ -1,18 +1,32 @@
 from dlgo.agent.pg import PolicyAgent
+from dlgo.rl.value import ValueAgent
 from dlgo.encoders.alphago import AlphaGoEncoder
-from dlgo.networks.alphago import AlphaGoPolicyResNet
+from dlgo.networks.alphago import AlphaGoPolicyResNet, AlphaGoValueResNet
 
 import os
 import torch
 
 current_path = os.path.dirname(__file__)
-version = 'v3'
-saving_epoch = 28
+type = 'rl'
+version = 'v0'
+saving_epoch = 21
 
-encoder = AlphaGoEncoder(use_player_plane=False)
-model = AlphaGoPolicyResNet()
-pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{saving_epoch}_{version}.pt")
+##############################################################################################################
+
+# encoder = AlphaGoEncoder(use_player_plane=False)
+# model = AlphaGoPolicyResNet()
+# pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_{type}_policy_epoch_{saving_epoch}_{version}.pt")
+# model.load_state_dict(pt_flie['model_state_dict'])
+
+# agent = PolicyAgent(model, encoder)
+# agent.serialize(type='RL', version=version)
+
+##############################################################################################################
+
+encoder = AlphaGoEncoder(use_player_plane=True)
+model = AlphaGoValueResNet()
+pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_{type}_value_epoch_{saving_epoch}_{version}.pt")
 model.load_state_dict(pt_flie['model_state_dict'])
 
-agent = PolicyAgent(model, encoder)
-agent.serialize(type='SL', version=version)
+agent = ValueAgent(model, encoder)
+agent.serialize(version=version)

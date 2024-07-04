@@ -22,9 +22,12 @@ class ExperienceDataSet(Dataset):
     def __init__(self, experiencebuffers, transform=None):
         self.experiencebuffers = experiencebuffers
         self.transform = transform
+        self.length = 0
+        for buff in experiencebuffers:
+            self.length += len(buff.actions)
     
     def __len__(self):
-        return (len(self.experiencebuffers) - 1) * 1024 + len(self.experiencebuffers[-1].actions)
+        return self.length
     
     def __getitem__(self, idx):
         div = idx // 1024
@@ -109,23 +112,27 @@ class PolicyAgent(Agent):
         version = 0
         base = path + f"\\buffers\\winning_experiences_policy_*.pt"
         files_num = len(glob.glob(base))
-        print(files_num)
         pivot = int(files_num * 0.8)
 
         winning_train_buffers = []
         losing_train_buffers = []
         winning_test_buffers = []
         losing_test_buffers = []
+        train_data_counts = 0
 
         for idx in range(files_num):
             if idx < pivot:
-                winning_train_buffer, losing_train_buffer = load_experience(name=f'policy_{idx}')
-                winning_train_buffers.append(winning_train_buffer)
-                losing_train_buffers.append(losing_train_buffer)
+                experience_buffer = load_experience(result="winning", type="policy", no=f'{idx}')
+                train_data_counts += len(experience_buffer.actions)
+                winning_train_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="policy", no=f'{idx}')
+                train_data_counts += len(experience_buffer.actions)
+                losing_train_buffers.append(experience_buffer)
             else:
-                winning_test_buffer, losing_test_buffer = load_experience(name=f'policy_{idx}')
-                winning_test_buffers.append(winning_test_buffer)
-                losing_test_buffers.append(losing_test_buffer)
+                experience_buffer = load_experience(result="winning", type="policy", no=f'{idx}')
+                winning_test_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="policy", no=f'{idx}')
+                losing_test_buffers.append(experience_buffer)
 
         winning_train_dataset = ExperienceDataSet(winning_train_buffers, transform=trans_board)
         losing_train_dataset = ExperienceDataSet(losing_train_buffers, transform=trans_board)
@@ -138,11 +145,11 @@ class PolicyAgent(Agent):
         losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
 
         optimizer = SGD(self._model.parameters(), lr=lr)
-        loss_fn = nn.CrossEntropyLoss()
+        winning_loss_fn = CELoss
+        losing_loss_fn = InverseCELoss
         NUM_EPOCHES = 100
         self._model.cuda()
-        print(winning_train_dataset)
-        total_steps = len(winning_train_dataset) // batch_size * 8
+        total_steps = train_data_counts // batch_size * 8
 
         for epoch in range(NUM_EPOCHES):
             self._model.train()
@@ -154,7 +161,7 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = 1 - loss_fn(y_, y.cuda())
+                loss = losing_loss_fn(y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
@@ -168,7 +175,7 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = loss_fn(y_, y.cuda()) 
+                loss = winning_loss_fn(y_, y.cuda()) 
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
@@ -188,12 +195,12 @@ class PolicyAgent(Agent):
             x, y = next(iter(losing_test_loader))
             x = x.cuda()
             y_ = self._model(x)
-            loss = 1 - loss_fn(y_, y.cuda()) 
+            loss = losing_loss_fn(y_, y.cuda()) 
             eval_loss += loss.item()
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
             y_ = self._model(x)
-            loss = loss_fn(y_, y.cuda()) 
+            loss = winning_loss_fn(y_, y.cuda()) 
             eval_loss += loss.item()
             eval_loss /= 2
             print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
@@ -231,19 +238,36 @@ def compute_acc(argmax, y):
         return count / len(argmax)
 
 def trans_board(state):
-    if random.randint(0, 7) == 0:
+    val = random.randint(0, 7)
+    if val == 0:
         return state
-    elif random.randint(0, 7) == 1:
+    elif val == 1:
         return torch.rot90(state, k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 2:
+    elif val == 2:
         return torch.flip(state, dims=[1])
-    elif random.randint(0, 7) == 3:
+    elif val == 3:
         return torch.rot90(torch.flip(state, dims=[1]), k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 4:
+    elif val == 4:
         return torch.flip(state, dims=[2])
-    elif random.randint(0, 7) == 5:
+    elif val == 5:
         return torch.rot90(torch.flip(state, dims=[2]), k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 6:
+    elif val == 6:
         return torch.flip(torch.flip(state, dims=[2]), dims=[1])
-    elif random.randint(0, 7) == 7:
+    elif val == 7:
         return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])
+    
+def CELoss(output, action):
+    size = len(output)
+    result = torch.zeros(size)
+    for i in range(size):
+        value = (-1.0)*torch.log(torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+        result[i] = value
+    return torch.mean(result)
+
+def InverseCELoss(output, action):
+    size = len(output)
+    result = torch.zeros(size)
+    for i in range(size):
+        value = (-1.0)*torch.log(1 - torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+        result[i] = value
+    return torch.mean(result)

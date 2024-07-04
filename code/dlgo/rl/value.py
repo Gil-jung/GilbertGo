@@ -21,16 +21,19 @@ class ValueDataSet(Dataset):
     def __init__(self, experiencebuffers, transform=None):
         self.experiencebuffers = experiencebuffers
         self.transform = transform
+        self.length = 0
+        for buff in experiencebuffers:
+            self.length += len(buff.rewards)
     
     def __len__(self):
-        return (len(self.experiencebuffers) - 1) * 1024 + len(self.experiencebuffers[-1].rewards)
+        return self.length
     
     def __getitem__(self, idx):
         div = idx // 1024
         mod = idx % 1024
 
         X = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
-        y = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.long)
+        y = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.float32)
 
         if self.transform:
             X = self.transform(X)
@@ -130,21 +133,26 @@ class ValueAgent(Agent):
         losing_train_buffers = []
         winning_test_buffers = []
         losing_test_buffers = []
+        train_data_counts = 0
         
         for idx in range(files_num):
             if idx < pivot:
-                winning_train_buffer, losing_train_buffer = load_experience(name=f'value_{idx}')
-                winning_train_buffers.append(winning_train_buffer)
-                losing_train_buffers.append(losing_train_buffer)
+                experience_buffer = load_experience(result="winning", type="value", no=f'{idx}')
+                train_data_counts += len(experience_buffer.rewards)
+                winning_train_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="value", no=f'{idx}')
+                train_data_counts += len(experience_buffer.rewards)
+                losing_train_buffers.append(experience_buffer)
             else:
-                winning_test_buffer, losing_test_buffer = load_experience(name=f'value_{idx}')
-                winning_test_buffers.append(winning_test_buffer)
-                losing_test_buffers.append(losing_test_buffer)
+                experience_buffer = load_experience(result="winning", type="value", no=f'{idx}')
+                winning_test_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="value", no=f'{idx}')
+                losing_test_buffers.append(experience_buffer)
 
-        winning_train_dataset = ValueDataSet(winning_train_buffers, transform=None)
-        losing_train_dataset = ValueDataSet(losing_train_buffers, transform=None)
-        winning_test_dataset = ValueDataSet(winning_test_buffers, transform=None)
-        losing_test_dataset = ValueDataSet(losing_test_buffers, transform=None)
+        winning_train_dataset = ValueDataSet(winning_train_buffers, transform=trans_board)
+        losing_train_dataset = ValueDataSet(losing_train_buffers, transform=trans_board)
+        winning_test_dataset = ValueDataSet(winning_test_buffers, transform=trans_board)
+        losing_test_dataset = ValueDataSet(losing_test_buffers, transform=trans_board)
 
         winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
         losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
@@ -155,7 +163,7 @@ class ValueAgent(Agent):
         loss_fn = nn.MSELoss()
         NUM_EPOCHES = 100
         self.model.cuda()
-        total_steps = len(winning_train_dataset) // batch_size * 8
+        total_steps = train_data_counts // batch_size * 8
 
         for epoch in range(NUM_EPOCHES):
             self.model.train()
@@ -192,32 +200,32 @@ class ValueAgent(Agent):
 
             print('='*50)
             print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
-            _, argmax = torch.max(y_, dim=1)
-            train_acc = compute_acc(argmax, y)
-            print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
+            # _, argmax = torch.max(y_, dim=1)
+            # train_acc = compute_acc(argmax, y)
+            # print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
 
-            self._model.eval()
+            self.model.eval()
             eval_loss = 0
             x, y = next(iter(losing_test_loader))
             x = x.cuda()
-            y_ = self._model(x)
+            y_ = self.model(x)
             y_ = torch.squeeze(y_, dim=1)
             loss = loss_fn(y_, y.cuda())
             eval_loss += loss.item()
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
-            y_ = self._model(x)
+            y_ = self.model(x)
             y_ = torch.squeeze(y_, dim=1)
             loss = loss_fn(y_, y.cuda()) 
             eval_loss += loss.item()
             eval_loss /= 2
             print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
-            _, argmax = torch.max(y_, dim=1)
-            test_acc = compute_acc(argmax, y)
-            print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
+            # _, argmax = torch.max(y_, dim=1)
+            # test_acc = compute_acc(argmax, y)
+            # print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
 
             torch.save({
-                'model_state_dict': self._model.state_dict(),
+                'model_state_dict': self.model.state_dict(),
                 'loss': eval_loss,
             }, path + f"\\checkpoints\\alphago_rl_value_epoch_{epoch+1}_v{version}.pt")
 
@@ -257,19 +265,20 @@ def compute_acc(argmax, y):
         return count / len(argmax)
 
 def trans_board(state):
-    if random.randint(0, 7) == 0:
+    val = random.randint(0, 7)
+    if val == 0:
         return state
-    elif random.randint(0, 7) == 1:
+    elif val == 1:
         return torch.rot90(state, k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 2:
+    elif val == 2:
         return torch.flip(state, dims=[1])
-    elif random.randint(0, 7) == 3:
+    elif val == 3:
         return torch.rot90(torch.flip(state, dims=[1]), k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 4:
+    elif val == 4:
         return torch.flip(state, dims=[2])
-    elif random.randint(0, 7) == 5:
+    elif val == 5:
         return torch.rot90(torch.flip(state, dims=[2]), k=1, dims=[1, 2])
-    elif random.randint(0, 7) == 6:
+    elif val == 6:
         return torch.flip(torch.flip(state, dims=[2]), dims=[1])
-    elif random.randint(0, 7) == 7:
+    elif val == 7:
         return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])
