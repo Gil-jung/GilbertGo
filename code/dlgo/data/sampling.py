@@ -11,7 +11,7 @@ from six.moves import range
 
 class Sampler:
     """Sample training and test data from zipped sgf files such that test data is kept stable."""
-    def __init__(self, data_dir='data', num_test_games=100, cap_year=2015, seed=1337):
+    def __init__(self, data_dir='data', num_test_games=100, cap_year=2019, seed=1337):
         self.data_dir = data_dir
         self.num_test_games = num_test_games
         self.test_games = []
@@ -40,7 +40,7 @@ class Sampler:
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
             # year = int(filename.split('-')[1].split('_')[0])
-            year = int(filename.split('-')[1])
+            year = filename.split('-')[1]
             if year != self.cap_year:
                 continue
             num_games = fileinfo['num_games']
@@ -64,7 +64,7 @@ class Sampler:
         for file_info in index.file_info:
             filename = file_info['filename']
             # year = int(filename.split('-')[1].split('_')[0])
-            year = int(filename.split('-')[1])
+            year = filename.split('-')[1]
             if year != self.cap_year:
                 continue
             num_games = file_info['num_games']
@@ -98,7 +98,7 @@ class Sampler:
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
             # year = int(filename.split('-')[1].split('_')[0])
-            year = int(filename.split('-')[1])
+            year = filename.split('-')[1]
             if year != self.cap_year:
                 continue
             num_games = fileinfo['num_games']
@@ -122,7 +122,7 @@ class Sampler:
         for fileinfo in index.file_info:
             filename = fileinfo['filename']
             # year = int(filename.split('-')[1].split('_')[0])
-            year = int(filename.split('-')[1])
+            year = filename.split('-')[1]
             if year != self.cap_year:
                 continue
             if 'num_games' in fileinfo.keys():
