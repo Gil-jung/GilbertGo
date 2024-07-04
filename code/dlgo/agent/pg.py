@@ -211,7 +211,7 @@ class PolicyAgent(Agent):
             torch.save({
                 'model_state_dict': self._model.state_dict(),
                 'loss': eval_loss,
-            }, path + f"\\checkpoints\\alphago_rl_policy_epoch_{epoch+1}_v{version}.pt")
+            }, path + f"\\checkpoints\\alphago_RL_policy_epoch_{epoch+1}_v{version}.pt")
 
         self._model.cpu()
 

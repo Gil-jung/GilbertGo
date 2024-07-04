@@ -10,11 +10,7 @@ import os
 
 def main():
     current_path = os.path.dirname(__file__)
-
-    rows, cols = 19, 19
-    num_classes = rows * cols
-    num_games = 1255
-
+    
     def compute_acc(argmax, y):
         count = 0
         for i in range(len(argmax)):
@@ -34,16 +30,19 @@ def main():
             nn.init.kaiming_uniform_(m.weight.data)
             nn.init.constant_(m.bias.data, 0)
 
+    rows, cols = 19, 19
+    num_classes = rows * cols
+    num_games = 1300
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 100
     pre_trained = True
-    version = 0
+    version = 1
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year='2019_04', use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year='2019_04', use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year='2019_03', use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year='2019_03', use_generator=True)
 
     alphago_sl_policy = AlphaGoPolicyResNet().cuda()
     if not pre_trained:
@@ -99,7 +98,7 @@ def main():
         torch.save({
             'model_state_dict': alphago_sl_policy.state_dict(),
             'loss': loss,
-        }, current_path + f"\\checkpoints\\alphago_sl_policy_epoch_{epoch+1}_v{version+1}.pt")
+        }, current_path + f"\\checkpoints\\alphago_SL_policy_epoch_{epoch+1}_v{version+1}.pt")
 
 if __name__ == '__main__':
     main()
