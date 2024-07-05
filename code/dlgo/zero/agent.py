@@ -1,7 +1,12 @@
+import os, glob, random
 import numpy as np
 import torch
+import torch.nn as nn
+from torch.optim import SGD
+from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent import Agent
+from dlgo.zero.experience import load_experience
 
 __all__ = [
     'ZeroAgent',
@@ -58,6 +63,31 @@ class ZeroTreeNode:
         if move in self.branches:
             return self.branches[move].visit_count
         return 0
+
+
+class ZeroExperienceDataSet(Dataset):
+    def __init__(self, experiencebuffers, transform=None):
+        self.experiencebuffers = experiencebuffers
+        self.transform = transform
+        self.length = 0
+        for buff in experiencebuffers:
+            self.length += len(buff.rewards)
+    
+    def __len__(self):
+        return self.length
+    
+    def __getitem__(self, idx):
+        div = idx // 1024
+        mod = idx % 1024
+
+        states = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
+        visit_counts = torch.tensor(self.experiencebuffers[div].visit_counts[mod], dtype=torch.float32)
+        advantages = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.float32)
+
+        if self.transform:
+            states = self.transform(states)
+
+        return states, (visit_counts, advantages)
 
 
 class ZeroAgent(Agent):
@@ -127,3 +157,172 @@ class ZeroAgent(Agent):
         if parent is not None:
             parent.add_child(move, new_node)
         return new_node
+    
+    def train(self, learning_rate=0.001, clipnorm=1.0, batch_size=128):
+        path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+        version = 0
+        base = path + f"\\buffers\\winning_experiences_zero_*.pt"
+        files_num = len(glob.glob(base))
+        pivot = int(files_num * 0.8)
+
+        winning_train_buffers = []
+        losing_train_buffers = []
+        winning_test_buffers = []
+        losing_test_buffers = []
+        train_data_counts = 0
+
+        for idx in range(files_num):
+            if idx < pivot:
+                experience_buffer = load_experience(result="winning", type="zero", no=f'{idx}')
+                train_data_counts += len(experience_buffer.actions)
+                winning_train_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="zero", no=f'{idx}')
+                train_data_counts += len(experience_buffer.actions)
+                losing_train_buffers.append(experience_buffer)
+            else:
+                experience_buffer = load_experience(result="winning", type="zero", no=f'{idx}')
+                winning_test_buffers.append(experience_buffer)
+                experience_buffer = load_experience(result="losing", type="zero", no=f'{idx}')
+                losing_test_buffers.append(experience_buffer)
+
+        winning_train_dataset = ZeroExperienceDataSet(winning_train_buffers, transform=trans_board)
+        losing_train_dataset = ZeroExperienceDataSet(losing_train_buffers, transform=trans_board)
+        winning_test_dataset = ZeroExperienceDataSet(winning_test_buffers, transform=trans_board)
+        losing_test_dataset = ZeroExperienceDataSet(losing_test_buffers, transform=trans_board)
+
+        winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
+        losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
+        winning_test_loader = DataLoader(winning_test_dataset, batch_size=batch_size, shuffle=True)
+        losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
+
+        optimizer = SGD(self.model.parameters(), lr=learning_rate)
+        winning_loss_fn = CELoss
+        losing_loss_fn = InverseCELoss
+        value_loss_fn = nn.MSELoss()
+        NUM_EPOCHES = 100
+        self.model.cuda()
+        total_steps = train_data_counts // batch_size * 8
+
+        for epoch in range(NUM_EPOCHES):
+            self.model.train()
+            tot_loss = 0.0
+            steps = 0
+
+            for x, y in losing_train_loader:
+                steps += 1
+                optimizer.zero_grad()
+                x = x.cuda()
+
+                visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+                y[0] = y[0] / visit_sums
+
+                y_ = self.model(x)
+                loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                loss.backward()
+                tot_loss += loss.item()
+                nn.utils.clip_grad_norm_(self.model.parameters(), clipnorm)
+                optimizer.step()
+
+                if steps >= total_steps // 2:
+                    break
+            
+            for x, y in winning_train_loader:
+                steps += 1
+                optimizer.zero_grad()
+                x = x.cuda()
+
+                visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+                y[0] = y[0] / visit_sums
+
+                y_ = self.model(x)
+                loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                loss.backward()
+                tot_loss += loss.item()
+                nn.utils.clip_grad_norm_(self.model.parameters(), clipnorm)
+                optimizer.step()
+
+                if steps >= total_steps:
+                    break
+
+            print('='*50)
+            print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
+            _, argmax = torch.max(y_[0], dim=1)
+            train_acc = compute_acc(argmax, y[0])
+            print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
+
+            self.model.eval()
+            eval_loss = 0
+            x, y = next(iter(losing_test_loader))
+            x = x.cuda()
+
+            visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+            y[0] = y[0] / visit_sums
+
+            y_ = self.model(x)
+            loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            eval_loss += loss.item()
+            x, y = next(iter(winning_test_loader))
+            x = x.cuda()
+
+            visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+            y[0] = y[0] / visit_sums
+
+            y_ = self.model(x)
+            loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            eval_loss += loss.item()
+            eval_loss /= 2
+            print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
+            _, argmax = torch.max(y_[0], dim=1)
+            test_acc = compute_acc(argmax, y[0])
+            print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
+
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                'loss': eval_loss,
+            }, path + f"\\checkpoints\\alphago_RL_zero_epoch_{epoch+1}_v{version}.pt")
+
+        self.model.cpu()
+
+
+
+def compute_acc(argmax, y):
+        count = 0
+        for i in range(len(argmax)):
+            if argmax[i] == y[i]:
+                count += 1
+        return count / len(argmax)
+
+def trans_board(state):
+    val = random.randint(0, 7)
+    if val == 0:
+        return state
+    elif val == 1:
+        return torch.rot90(state, k=1, dims=[1, 2])
+    elif val == 2:
+        return torch.flip(state, dims=[1])
+    elif val == 3:
+        return torch.rot90(torch.flip(state, dims=[1]), k=1, dims=[1, 2])
+    elif val == 4:
+        return torch.flip(state, dims=[2])
+    elif val == 5:
+        return torch.rot90(torch.flip(state, dims=[2]), k=1, dims=[1, 2])
+    elif val == 6:
+        return torch.flip(torch.flip(state, dims=[2]), dims=[1])
+    elif val == 7:
+        return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])
+
+def CELoss(output, action):
+    size = len(output)
+    result = torch.zeros(size)
+    for i in range(size):
+        value = (-1.0)*torch.log(torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+        result[i] = value
+    return torch.mean(result)
+
+def InverseCELoss(output, action):
+    size = len(output)
+    result = torch.zeros(size)
+    for i in range(size):
+        value = (-1.0)*torch.log(1 - torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+        result[i] = value
+    return torch.mean(result)

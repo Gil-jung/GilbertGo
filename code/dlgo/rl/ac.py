@@ -49,7 +49,7 @@ class ACAgent(Agent):
         self.collector = collector
 
     def predict(self, input_tensor):
-        return self.model(input_tensor)
+        return self.model(input_tensor.cuda()).cpu()
 
     def select_move(self, game_state):
         num_moves = self.encoder.board_width * self.encoder.board_height

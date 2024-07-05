@@ -8,8 +8,8 @@ import torch
 
 current_path = os.path.dirname(__file__)
 type = 'SL'
-version = 'v1'
-saving_epoch = 24
+version = 'v4'
+saving_epoch = 18
 
 ##############################################################################################################
 
