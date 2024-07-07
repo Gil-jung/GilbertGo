@@ -6,10 +6,12 @@ from torch.optim import SGD
 from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent import Agent
+from dlgo.encoders.base import get_encoder_by_name
 from dlgo.zero.experience import load_experience
 
 __all__ = [
     'ZeroAgent',
+    'load_zero_agent',
 ]
 
 
@@ -92,7 +94,7 @@ class ZeroExperienceDataSet(Dataset):
 
 class ZeroAgent(Agent):
     def __init__(self, model, encoder, rounds_per_move=1600, c=2.0):
-        self.model = model
+        self.model = model.cuda()
         self.encoder = encoder
         self.collector = None
         self.num_rounds = rounds_per_move
@@ -106,6 +108,8 @@ class ZeroAgent(Agent):
             next_move = self.select_branch(node)
             while node.has_child(next_move):
                 node = node.get_child(next_move)
+                # if node.state.is_over():
+                #     break
                 next_move = self.select_branch(node)
 
             new_state = node.state.apply_move(next_move)
@@ -142,7 +146,8 @@ class ZeroAgent(Agent):
         return max(node.moves(), key=score_branch)
     
     def predict(self, input_tensor):
-        return self.model(input_tensor.cuda()).cpu()
+        output_tensor = self.model(input_tensor.cuda())
+        return (output_tensor[0].cpu(), output_tensor[1].cpu())
 
     def create_node(self, game_state, move=None, parent=None):
         state_tensor = self.encoder.encode(game_state)
@@ -150,6 +155,10 @@ class ZeroAgent(Agent):
         priors, value = self.predict(model_input)
         priors = torch.squeeze(priors, dim=0).detach().numpy()
         value = torch.squeeze(value, dim=0).detach().numpy()
+        # Add Dirichlet noise to the root node.
+        if parent is None:
+            noise = np.random.dirichlet(0.03 * np.ones_like(priors))
+            priors = 0.75 * priors + 0.25 * noise
         move_priors = {
             self.encoder.decode_move_index(idx): p for idx, p in enumerate(priors)
         }
@@ -283,6 +292,15 @@ class ZeroAgent(Agent):
 
         self.model.cpu()
 
+    def serialize(self, version='v0'):
+        path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+        torch.save({
+            'encoder_name': self.encoder.name(),
+            'board_width': self.encoder.board_size,
+            'board_height': self.encoder.board_size,
+            'model_state_dict': self.model.state_dict(),
+            'model': self.model,
+        }, path + f"\\agents\\AlphaGo_Zero_Agent_{version}.pt")
 
 
 def compute_acc(argmax, y):
@@ -326,3 +344,17 @@ def InverseCELoss(output, action):
         value = (-1.0)*torch.log(1 - torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
         result[i] = value
     return torch.mean(result)
+
+def load_zero_agent(version='v0'):
+    path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
+    pt_file = torch.load(path + f"\\agents\\AlphaGo_Zero_Agent_{version}.pt")
+    model = pt_file['model']
+    encoder_name = pt_file['encoder_name']
+    if not isinstance(encoder_name, str):
+        encoder_name = encoder_name.decode('ascii')
+    board_width = pt_file['board_width']
+    board_height = pt_file['board_height']
+    encoder = get_encoder_by_name(
+        encoder_name, (board_width, board_height)
+    )
+    return ZeroAgent(model, encoder)

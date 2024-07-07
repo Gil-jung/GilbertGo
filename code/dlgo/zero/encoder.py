@@ -5,7 +5,7 @@ from dlgo.gotypes import Player, Point
 
 
 class ZeroEncoder():
-    def __init__(self, board_size):
+    def __init__(self, board_size=19):
         self.board_size = board_size
         # 0 - 3. our stones with 1, 2, 3, 4+ liberties
         # 4 - 7. opponent stones with 1, 2, 3, 4+ liberties

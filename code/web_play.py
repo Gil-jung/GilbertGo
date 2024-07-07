@@ -6,8 +6,8 @@ from dlgo.agent.predict import DeepLearningAgent, load_prediction_agent
 from dlgo.agent.pg import load_policy_agent
 from dlgo.httpfrontend.server import get_web_app
 
-agent = load_policy_agent()
-# agent = load_prediction_agent()
+# agent = load_policy_agent()
+agent = load_prediction_agent()
 # agent = MCTSAgent()
 # agent = AlphaBetaAgent()
 # agent = RandomBot()

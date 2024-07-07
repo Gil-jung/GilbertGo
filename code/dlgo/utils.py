@@ -45,7 +45,7 @@ def coords_from_point(point):
 
 class MoveAge():
     def __init__(self, board):
-        self.move_ages = -np.ones((board.num_rows, board.num_cols))
+        self.move_ages = -np.ones((board.num_rows, board.num_cols), dtype=int)
     
     def get(self, row, col):
         return self.move_ages[row, col]
