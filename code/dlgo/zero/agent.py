@@ -73,7 +73,7 @@ class ZeroExperienceDataSet(Dataset):
         self.transform = transform
         self.length = 0
         for buff in experiencebuffers:
-            self.length += len(buff.rewards)
+            self.length += len(buff.advantages)
     
     def __len__(self):
         return self.length
@@ -108,13 +108,16 @@ class ZeroAgent(Agent):
             next_move = self.select_branch(node)
             while node.has_child(next_move):
                 node = node.get_child(next_move)
-                # if node.state.is_over():
-                #     break
+                if node.state.is_over():
+                    break
                 next_move = self.select_branch(node)
 
-            new_state = node.state.apply_move(next_move)
-            child_node = self.create_node(new_state, move=next_move, parent=node)
-
+            if not node.state.is_over():
+                new_state = node.state.apply_move(next_move)
+                child_node = self.create_node(new_state, move=next_move, parent=node)
+            else:
+                child_node = node
+                node = node.parent
             move = next_move
             value = -1 * child_node.value
             while node is not None:

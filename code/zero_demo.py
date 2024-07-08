@@ -1,9 +1,9 @@
 from dlgo import scoring
-from dlgo import zero
-from dlgo import scoring
 from dlgo.goboard_fast import GameState, Player, Point
 from dlgo.encoders.zero import ZeroEncoder
 from dlgo.networks.alphago_zero import AlphaGoZeroMiniNet
+from dlgo.zero.agent import ZeroAgent, load_zero_agent
+from dlgo.zero.experience import ZeroExperienceBuffer, ZeroExperienceCollector, combine_experience
 
 from collections import namedtuple
 
@@ -29,22 +29,22 @@ def simulate_game(board_size, black_agent, white_agent):
 def main():
     pre_trained = False
     version = 'v0'
-    num_games = 10
+    num_games = 2
     board_size = 19
 
     if pre_trained == False:
         encoder = ZeroEncoder()
         model = AlphaGoZeroMiniNet()
-        agent1 = zero.ZeroAgent(model, encoder, rounds_per_move=10, c=2.0)
-        agent2 = zero.ZeroAgent(model, encoder, rounds_per_move=10, c=2.0)
+        agent1 = ZeroAgent(model, encoder, rounds_per_move=10, c=2.0)
+        agent2 = ZeroAgent(model, encoder, rounds_per_move=10, c=2.0)
     else:
-        agent1 = zero.load_zero_agent(version)
-        agent2 = zero.load_zero_agent(version)
+        agent1 = load_zero_agent(version)
+        agent2 = load_zero_agent(version)
     
     agent1.model.cuda()
     agent2.model.cuda()
-    c1 = zero.ZeroExperienceCollector()
-    c2 = zero.ZeroExperienceCollector()
+    c1 = ZeroExperienceCollector()
+    c2 = ZeroExperienceCollector()
     agent1.set_collector(c1)
     agent2.set_collector(c2)
     
@@ -66,7 +66,7 @@ def main():
             c1.complete_episode(reward=-1)
         base_color = base_color.other
     
-    exp_buffer = zero.combine_experience([c1, c2])
+    exp_buffer = combine_experience([c1, c2])
 
     winning_states = exp_buffer[0].states
     winning_visit_counts = exp_buffer[0].visit_counts
@@ -85,13 +85,13 @@ def main():
         current_losing_visit_counts, losing_visit_counts = losing_visit_counts[:chunk_size], losing_visit_counts[chunk_size:]
         current_losing_advantages, losing_advantages = losing_advantages[:chunk_size], losing_advantages[chunk_size:]
 
-        zero.ZeroExperienceBuffer(
+        ZeroExperienceBuffer(
             current_winning_states,
             current_winning_visit_counts,
             [],
             current_winning_advantages
         ).serialize(result="winning", name=f'zero_{chunk}')
-        zero.ZeroExperienceBuffer(
+        ZeroExperienceBuffer(
             current_losing_states,
             current_losing_visit_counts,
             [],
@@ -100,13 +100,13 @@ def main():
 
         chunk += 1
 
-    zero.ZeroExperienceBuffer(
+    ZeroExperienceBuffer(
         winning_states,
         winning_visit_counts,
         [],
         winning_advantages
     ).serialize(result="winning", name=f'zero_{chunk}')
-    zero.ZeroExperienceBuffer(
+    ZeroExperienceBuffer(
         losing_states,
         losing_visit_counts,
         [],
@@ -114,7 +114,7 @@ def main():
     ).serialize(result="losing", name=f'zero_{chunk}')
 
     agent1.train(
-        lr=0.001,
+        learning_rate=0.001,
         clipnorm=1.5,
         batch_size=128
     )

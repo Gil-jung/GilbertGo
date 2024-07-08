@@ -166,14 +166,6 @@ class AlphaGoZeroNet(nn.Module):
             nn.BatchNorm2d(num_features=256),
         )
 
-        self.res20 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(num_features=256),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(num_features=256),
-        )
-
         self.policy_head = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=2, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=2),
@@ -250,9 +242,6 @@ class AlphaGoZeroNet(nn.Module):
         x += residual
         residual = F.relu(x)
         x = self.res19(residual)
-        x += residual
-        residual = F.relu(x)
-        x = self.res20(residual)
         x += residual
         x = F.relu(x)
         policy = self.policy_head(x)
