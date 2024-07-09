@@ -32,19 +32,19 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 1700
+    num_games = 2000
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 100
     pre_trained = True
-    version = 5
+    version = 7
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year='2018_11', use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year='2018_11', use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2018_07', '2018_10'], use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2018_07', '2018_10'], use_generator=True)
 
-    alphago_sl_policy = AlphaGoPolicyResNet().cuda()
+    alphago_sl_policy = AlphaGoPolicyResNet().cuda(),
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")

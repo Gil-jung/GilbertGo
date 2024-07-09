@@ -130,7 +130,11 @@ class ZeroAgent(Agent):
             root_state_tensor = self.encoder.encode(game_state)
             visit_counts = np.array([root.visit_count(self.encoder.decode_move_index(idx)) 
                                      for idx in range(self.encoder.num_moves())])
-            self.collector.record_decision(root_state_tensor, visit_counts)
+            self.collector.record_decision(
+                state=root_state_tensor, 
+                visit_counts=visit_counts, 
+                estimated_value=root.value
+            )
         
         return max(root.moves(), key=root.visit_count)
 
@@ -186,10 +190,10 @@ class ZeroAgent(Agent):
         for idx in range(files_num):
             if idx < pivot:
                 experience_buffer = load_experience(result="winning", type="zero", no=f'{idx}')
-                train_data_counts += len(experience_buffer.actions)
+                train_data_counts += len(experience_buffer.advantages)
                 winning_train_buffers.append(experience_buffer)
                 experience_buffer = load_experience(result="losing", type="zero", no=f'{idx}')
-                train_data_counts += len(experience_buffer.actions)
+                train_data_counts += len(experience_buffer.advantages)
                 losing_train_buffers.append(experience_buffer)
             else:
                 experience_buffer = load_experience(result="winning", type="zero", no=f'{idx}')
