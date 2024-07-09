@@ -84,7 +84,7 @@ class ZeroExperienceDataSet(Dataset):
 
         states = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
         visit_counts = torch.tensor(self.experiencebuffers[div].visit_counts[mod], dtype=torch.float32)
-        advantages = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.float32)
+        advantages = torch.tensor(self.experiencebuffers[div].advantages[mod], dtype=torch.float32)
 
         if self.transform:
             states = self.transform(states)
@@ -229,7 +229,7 @@ class ZeroAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
 
-                visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+                visit_sums = torch.sum(y[0], dim=1).reshape((y[0].shape[0], 1))
                 y[0] = y[0] / visit_sums
 
                 y_ = self.model(x)
@@ -247,7 +247,7 @@ class ZeroAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
 
-                visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+                visit_sums = torch.sum(y[0], dim=1).reshape((y[0].shape[0], 1))
                 y[0] = y[0] / visit_sums
 
                 y_ = self.model(x)
@@ -271,7 +271,7 @@ class ZeroAgent(Agent):
             x, y = next(iter(losing_test_loader))
             x = x.cuda()
 
-            visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+            visit_sums = torch.sum(y[0], dim=1).reshape((y[0].shape[0], 1))
             y[0] = y[0] / visit_sums
 
             y_ = self.model(x)
@@ -280,7 +280,7 @@ class ZeroAgent(Agent):
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
 
-            visit_sums = np.sum(y[0], axis=1).reshape((y[0].shape[0], 1))
+            visit_sums = torch.sum(y[0], dim=1).reshape((y[0].shape[0], 1))
             y[0] = y[0] / visit_sums
 
             y_ = self.model(x)
