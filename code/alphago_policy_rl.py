@@ -7,7 +7,7 @@ from dlgo.rl.experience import ExperienceBuffer
 
 
 def main():
-    pre_trained = True
+    pre_trained = False
     SL_version_1 = 'v7'
     SL_version_2 = 'v7'
     RL_version = 'v0'
