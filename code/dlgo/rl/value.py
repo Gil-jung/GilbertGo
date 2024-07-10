@@ -227,7 +227,7 @@ class ValueAgent(Agent):
             torch.save({
                 'model_state_dict': self.model.state_dict(),
                 'loss': eval_loss,
-            }, path + f"\\checkpoints\\alphago_rl_value_epoch_{epoch+1}_v{version}.pt")
+            }, path + f"\\checkpoints\\alphago_RL_value_epoch_{epoch+1}_v{version}.pt")
 
         self.model.cpu()
     

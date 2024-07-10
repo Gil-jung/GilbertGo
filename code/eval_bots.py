@@ -102,7 +102,7 @@ def main():
     random.seed(int(time.time()) + os.getpid())
     np.random.seed(int(time.time()) + os.getpid())
 
-    agent1 = load_policy_agent(type='SL', version=args.agent1)
+    agent1 = load_policy_agent(type='RL', version=args.agent1)
     agent2 = load_policy_agent(type='SL', version=args.agent2)
     agent1._model.cuda()
     agent2._model.cuda()

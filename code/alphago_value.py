@@ -40,7 +40,7 @@ def main():
         batch_size=128,
     )
 
-    alphago_value.serialize(version='v0')
+    # alphago_value.serialize(version='v0')
 
 
 if __name__ == '__main__':

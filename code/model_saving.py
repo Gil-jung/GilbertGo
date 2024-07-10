@@ -7,9 +7,9 @@ import os
 import torch
 
 current_path = os.path.dirname(__file__)
-type = 'SL'
-version = 'v7'
-saving_epoch = 16
+type = 'RL'
+version = 'v0'
+saving_epoch = 61
 
 ##############################################################################################################
 

@@ -41,10 +41,10 @@ def main():
 
     encoder = AlphaGoEncoder(use_player_plane=False)
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2018_07', '2018_10'], use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2018_07', '2018_10'], use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2002'], use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2002'], use_generator=True)
 
-    alphago_sl_policy = AlphaGoPolicyResNet().cuda(),
+    alphago_sl_policy = AlphaGoPolicyResNet().cuda()
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")

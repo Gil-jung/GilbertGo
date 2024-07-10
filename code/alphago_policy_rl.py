@@ -7,8 +7,12 @@ from dlgo.rl.experience import ExperienceBuffer
 
 
 def main():
-    alphago_rl_agent = load_policy_agent(type='SL', version='v0')
-    opponent = load_policy_agent(type='SL', version='v0')
+    pre_trained = True
+    SL_version = 'v7'
+    RL_version = 'v0'
+
+    alphago_rl_agent = load_policy_agent(type='SL', version=SL_version)
+    opponent = load_policy_agent(type='SL', version=SL_version)
     alphago_rl_agent._model.cuda()
     opponent._model.cuda()
 
@@ -95,13 +99,16 @@ def main():
         []
     ).serialize(result="losing", name=f'value_{chunk}')
 
+    if pre_trained:
+        alphago_rl_agent = load_policy_agent(type='RL', version=RL_version)
+
     alphago_rl_agent.train(
         lr=0.001,
         clipnorm=1.0,
         batch_size=128
     )
 
-    alphago_rl_agent.serialize(type='RL', version='v0')
+    # alphago_rl_agent.serialize(type='RL', version='v0')
 
 
 if __name__ == '__main__':

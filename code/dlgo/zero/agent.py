@@ -262,8 +262,9 @@ class ZeroAgent(Agent):
 
             print('='*50)
             print("Epoch {}, Loss(train) : {}".format(epoch+1, tot_loss / steps))
-            _, argmax = torch.max(y_[0], dim=1)
-            train_acc = compute_acc(argmax, y[0])
+            _, argmax_y_ = torch.max(y_[0], dim=1)
+            _, argmax_y  = torch.max(y[0], dim=1)
+            train_acc = compute_acc(argmax_y_, argmax_y)
             print("Epoch {}, Acc(train) : {}".format(epoch+1, train_acc))
 
             self.model.eval()
@@ -288,8 +289,9 @@ class ZeroAgent(Agent):
             eval_loss += loss.item()
             eval_loss /= 2
             print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
-            _, argmax = torch.max(y_[0], dim=1)
-            test_acc = compute_acc(argmax, y[0])
+            _, argmax_y_ = torch.max(y_[0], dim=1)
+            _, argmax_y  = torch.max(y[0], dim=1)
+            test_acc = compute_acc(argmax_y_, argmax_y)
             print("Epoch {}, Acc(val) : {}".format(epoch+1, test_acc))
 
             torch.save({
@@ -337,20 +339,28 @@ def trans_board(state):
         return torch.rot90(torch.flip(torch.flip(state, dims=[2]), dims=[1]), k=1, dims=[1, 2])
 
 def CELoss(output, action):
-    size = len(output)
-    result = torch.zeros(size)
-    for i in range(size):
-        value = (-1.0)*torch.log(torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+    batch_size = len(output)
+    feature_size = len(output[0])
+    result = torch.zeros(batch_size)
+    for i in range(batch_size):
+        value = 0
+        cum = torch.sum(torch.exp(output[i]))
+        for j in range(feature_size):
+            value += action[i][j] * torch.log(torch.exp(output[i][j]) / cum)
         result[i] = value
-    return torch.mean(result)
+    return (-1.0) * torch.mean(result)
 
 def InverseCELoss(output, action):
-    size = len(output)
-    result = torch.zeros(size)
-    for i in range(size):
-        value = (-1.0)*torch.log(1 - torch.exp(output[i][action[i].long()]) / torch.sum(torch.exp(output[i])))
+    batch_size = len(output)
+    feature_size = len(output[0])
+    result = torch.zeros(batch_size)
+    for i in range(batch_size):
+        value = 0
+        cum = torch.sum(torch.exp(output[i]))
+        for j in range(feature_size):
+            value += action[i][j] * torch.log(1 - torch.exp(output[i][j]) / cum)
         result[i] = value
-    return torch.mean(result)
+    return (-1.0) * torch.mean(result)
 
 def load_zero_agent(version='v0'):
     path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
