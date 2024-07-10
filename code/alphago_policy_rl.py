@@ -8,11 +8,12 @@ from dlgo.rl.experience import ExperienceBuffer
 
 def main():
     pre_trained = True
-    SL_version = 'v7'
+    SL_version_1 = 'v7'
+    SL_version_2 = 'v7'
     RL_version = 'v0'
 
-    alphago_rl_agent = load_policy_agent(type='SL', version=SL_version)
-    opponent = load_policy_agent(type='SL', version=SL_version)
+    alphago_rl_agent = load_policy_agent(type='SL', version=SL_version_1)
+    opponent = load_policy_agent(type='SL', version=SL_version_2)
     alphago_rl_agent._model.cuda()
     opponent._model.cuda()
 
