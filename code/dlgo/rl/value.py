@@ -100,7 +100,7 @@ class ValueAgent(Agent):
             if not is_point_an_eye(game_state.board, move.point, game_state.next_player):
                 if self.collector is not None:
                     self.collector.record_decision(
-                        state=board_tensor,
+                        state=self.encoder.encode(game_state),
                         action=self.encoder.encode_point(move.point),
                     )
                 self.last_move_value = float(values[move_idx])

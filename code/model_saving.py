@@ -9,7 +9,7 @@ import torch
 current_path = os.path.dirname(__file__)
 type = 'RL'
 version = 'v0'
-saving_epoch = 61
+saving_epoch = 71
 
 ##############################################################################################################
 
@@ -19,7 +19,7 @@ pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_{type}_policy_epoch
 model.load_state_dict(pt_flie['model_state_dict'])
 
 agent = PolicyAgent(model, encoder)
-agent.serialize(type=type, version=version)
+agent.serialize(type=type, version='test')
 
 ##############################################################################################################
 

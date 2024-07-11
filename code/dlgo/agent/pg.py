@@ -107,9 +107,8 @@ class PolicyAgent(Agent):
             'model': self._model,
         }, path + f"\\agents\\AlphaGo_Policy_{type}_Agent_{version}.pt")
 
-    def train(self, lr=0.0001, clipnorm=1.0, batch_size=128):
+    def train(self, lr=0.0001, clipnorm=1.0, batch_size=128, version='v0'):
         path = os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
-        version = 0
         base = path + f"\\buffers\\winning_experiences_policy_*.pt"
         files_num = len(glob.glob(base))
         pivot = int(files_num * 0.8)
@@ -211,7 +210,7 @@ class PolicyAgent(Agent):
             torch.save({
                 'model_state_dict': self._model.state_dict(),
                 'loss': eval_loss,
-            }, path + f"\\checkpoints\\alphago_RL_policy_epoch_{epoch+1}_v{version}.pt")
+            }, path + f"\\checkpoints\\alphago_RL_policy_epoch_{epoch+1}_{version}.pt")
 
         self._model.cpu()
 

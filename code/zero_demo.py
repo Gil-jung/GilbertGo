@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+
 from dlgo import scoring
 from dlgo.goboard_fast import GameState, Player, Point
 from dlgo.encoders.zero import ZeroEncoder
@@ -25,6 +28,17 @@ def simulate_game(board_size, black_agent, white_agent):
 
     return game_result
 
+def initialize_weights(m):
+    if isinstance(m, nn.Conv2d):
+        nn.init.kaiming_uniform_(m.weight.data,nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.BatchNorm2d):
+        nn.init.constant_(m.weight.data, 1)
+        nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.Linear):
+        nn.init.kaiming_uniform_(m.weight.data)
+        nn.init.constant_(m.bias.data, 0)
 
 def main():
     pre_trained = False
@@ -35,9 +49,12 @@ def main():
     if pre_trained == False:
         encoder = ZeroEncoder()
         model = AlphaGoZeroMiniNet()
-        agent1 = ZeroAgent(model, encoder, rounds_per_move=100, c=2.0)
-        agent2 = ZeroAgent(model, encoder, rounds_per_move=100, c=2.0)
+        print("initializing...")
+        model.apply(initialize_weights)
+        agent1 = ZeroAgent(model, encoder, rounds_per_move=20, c=2.0)
+        agent2 = ZeroAgent(model, encoder, rounds_per_move=20, c=2.0)
     else:
+        print("model loading...")
         agent1 = load_zero_agent(version)
         agent2 = load_zero_agent(version)
     
@@ -119,7 +136,7 @@ def main():
         batch_size=128
     )
 
-    agent1.serialize(type='RL', version=version)
+    # agent1.serialize(type='RL', version=version)
 
 
 if __name__ == '__main__':

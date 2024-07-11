@@ -8,7 +8,7 @@ import torch.nn as nn
 
 def main():
     path = os.path.dirname(__file__)
-    pre_trained = False
+    pre_trained = True
     version = 0
     encoder = AlphaGoEncoder(use_player_plane=True)
     model = AlphaGoValueResNet()

@@ -7,10 +7,11 @@ from dlgo.rl.experience import ExperienceBuffer
 
 
 def main():
-    pre_trained = False
+    pre_trained = True
     SL_version_1 = 'v7'
-    SL_version_2 = 'v7'
-    RL_version = 'v0'
+    SL_version_2 = 'v6'
+    RL_version = 'v1'
+    num_games = 128
 
     alphago_rl_agent = load_policy_agent(type='SL', version=SL_version_1)
     opponent = load_policy_agent(type='SL', version=SL_version_2)
@@ -21,8 +22,7 @@ def main():
     model = AlphaGoValueResNet()
     value_agent1 = ValueAgent(model, encoder)
     value_agent2 = ValueAgent(model, encoder)
-
-    num_games = 128
+    
     policy_exp_buffer, value_exp_buffer = experience_simulation(
         num_games, alphago_rl_agent, opponent, value_agent1, value_agent2
     )
@@ -106,7 +106,8 @@ def main():
     alphago_rl_agent.train(
         lr=0.001,
         clipnorm=1.0,
-        batch_size=128
+        batch_size=128,
+        version=RL_version
     )
 
     # alphago_rl_agent.serialize(type='RL', version='v0')

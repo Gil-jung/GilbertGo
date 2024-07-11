@@ -214,6 +214,7 @@ class ZeroAgent(Agent):
         optimizer = SGD(self.model.parameters(), lr=learning_rate)
         winning_loss_fn = CELoss
         losing_loss_fn = InverseCELoss
+        policy_loss_fn = nn.CrossEntropyLoss()
         value_loss_fn = nn.MSELoss()
         NUM_EPOCHES = 100
         self.model.cuda()
@@ -233,7 +234,8 @@ class ZeroAgent(Agent):
                 y[0] = y[0] / visit_sums
 
                 y_ = self.model(x)
-                loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                # loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                loss = policy_loss_fn((-1.0)*y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self.model.parameters(), clipnorm)
@@ -251,7 +253,8 @@ class ZeroAgent(Agent):
                 y[0] = y[0] / visit_sums
 
                 y_ = self.model(x)
-                loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                # loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+                loss = policy_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self.model.parameters(), clipnorm)
@@ -276,7 +279,8 @@ class ZeroAgent(Agent):
             y[0] = y[0] / visit_sums
 
             y_ = self.model(x)
-            loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            # loss = losing_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            loss = policy_loss_fn((-1.0)*y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
             eval_loss += loss.item()
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
@@ -285,7 +289,8 @@ class ZeroAgent(Agent):
             y[0] = y[0] / visit_sums
 
             y_ = self.model(x)
-            loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            # loss = winning_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
+            loss = policy_loss_fn(y_[0], y[0].cuda()) + value_loss_fn(y_[1], y[1].cuda())
             eval_loss += loss.item()
             eval_loss /= 2
             print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))

@@ -61,33 +61,33 @@ def simulate_game(black_player, white_player, board_size=19):
     )
 
 
-def play_games(args):
-    agent1_fname, agent2_fname, num_games, board_size = args
+# def play_games(args):
+#     agent1_fname, agent2_fname, num_games, board_size = args
 
-    random.seed(int(time.time()) + os.getpid())
-    np.random.seed(int(time.time()) + os.getpid())
+#     random.seed(int(time.time()) + os.getpid())
+#     np.random.seed(int(time.time()) + os.getpid())
 
-    agent1 = load_policy_agent(type='SL', version=agent1_fname)
-    agent2 = load_policy_agent(type='SL', version=agent2_fname)
+#     agent1 = load_policy_agent(type='SL', version=agent1_fname)
+#     agent2 = load_policy_agent(type='SL', version=agent2_fname)
 
-    wins, losses = 0, 0
-    color1 = Player.black
-    for i in range(num_games):
-        print('Simulating game %d/%d...' % (i + 1, num_games))
-        if color1 == Player.black:
-            black_player, white_player = agent1, agent2
-        else:
-            white_player, black_player = agent1, agent2
-        game_record = simulate_game(black_player, white_player, board_size)
-        if game_record.winner == color1:
-            print('Agent 1 wins')
-            wins += 1
-        else:
-            print('Agent 2 wins')
-            losses += 1
-        print('Agent 1 record: %d/%d' % (wins, wins + losses))
-        color1 = color1.other
-    return wins, losses
+#     wins, losses = 0, 0
+#     color1 = Player.black
+#     for i in range(num_games):
+#         print('Simulating game %d/%d...' % (i + 1, num_games))
+#         if color1 == Player.black:
+#             black_player, white_player = agent1, agent2
+#         else:
+#             white_player, black_player = agent1, agent2
+#         game_record = simulate_game(black_player, white_player, board_size)
+#         if game_record.winner == color1:
+#             print('Agent 1 wins')
+#             wins += 1
+#         else:
+#             print('Agent 2 wins')
+#             losses += 1
+#         print('Agent 1 record: %d/%d' % (wins, wins + losses))
+#         color1 = color1.other
+#     return wins, losses
 
 
 def main():
@@ -103,7 +103,7 @@ def main():
     np.random.seed(int(time.time()) + os.getpid())
 
     agent1 = load_policy_agent(type='RL', version=args.agent1)
-    agent2 = load_policy_agent(type='SL', version=args.agent2)
+    agent2 = load_policy_agent(type='RL', version=args.agent2)
     agent1._model.cuda()
     agent2._model.cuda()
 
