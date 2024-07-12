@@ -21,16 +21,18 @@ def simulate_game(black_player, white_player, black_value_agent, white_value_age
         next_move = agents[game.next_player].select_move(game)
         moves.append(next_move)
 
-        if game.next_player == Player.black:
-            black_value_agent.collector.record_decision(
-                state=black_value_agent.encoder.encode(game),
-                # action=black_value_agent.encoder.encode_point(next_move.point),
-            )
-        elif game.next_player == Player.white:
-            white_value_agent.collector.record_decision(
-                state=white_value_agent.encoder.encode(game),
-                # action=white_value_agent.encoder.encode_point(next_move.point),
-            )
+        if next_move != goboard.Move.pass_turn():
+            if game.next_player == Player.black:
+                black_value_agent.collector.record_decision(
+                    state=black_value_agent.encoder.encode(game),
+                    # action=black_value_agent.encoder.encode_point(next_move.point),
+                )
+            elif game.next_player == Player.white:
+                white_value_agent.collector.record_decision(
+                    state=white_value_agent.encoder.encode(game),
+                    # action=white_value_agent.encoder.encode_point(next_move.point),
+                )
+                
         game = game.apply_move(next_move)
     
     game_result = scoring.compute_game_result(game)

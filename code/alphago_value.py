@@ -30,8 +30,8 @@ def main():
         print("initializing...")
     else:
         pt_flie = torch.load(path + f"\\agents\\AlphaGo_Value_Agent_v{version}.pt")
-        model.load_state_dict(pt_flie['model_state_dict'])
         print("model loading...")
+        model.load_state_dict(pt_flie['model_state_dict'])
 
     alphago_value = ValueAgent(model, encoder)
 

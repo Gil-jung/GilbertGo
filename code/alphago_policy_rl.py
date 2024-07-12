@@ -7,10 +7,10 @@ from dlgo.rl.experience import ExperienceBuffer
 
 
 def main():
-    pre_trained = True
+    pre_trained = False
     SL_version_1 = 'v7'
-    SL_version_2 = 'v6'
-    RL_version = 'v1'
+    SL_version_2 = 'v7'
+    RL_version = 'v0'
     num_games = 128
 
     alphago_rl_agent = load_policy_agent(type='SL', version=SL_version_1)
@@ -100,15 +100,15 @@ def main():
         []
     ).serialize(result="losing", name=f'value_{chunk}')
 
-    if pre_trained:
-        alphago_rl_agent = load_policy_agent(type='RL', version=RL_version)
+    # if pre_trained:
+    #     alphago_rl_agent = load_policy_agent(type='RL', version=RL_version)
 
-    alphago_rl_agent.train(
-        lr=0.001,
-        clipnorm=1.0,
-        batch_size=128,
-        version=RL_version
-    )
+    # alphago_rl_agent.train(
+    #     lr=0.001,
+    #     clipnorm=1.0,
+    #     batch_size=128,
+    #     version=RL_version
+    # )
 
     # alphago_rl_agent.serialize(type='RL', version='v0')
 

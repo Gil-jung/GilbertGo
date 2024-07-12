@@ -41,7 +41,7 @@ def initialize_weights(m):
         nn.init.constant_(m.bias.data, 0)
 
 def main():
-    pre_trained = False
+    pre_trained = True
     version = 'v0'
     num_games = 128
     board_size = 19
@@ -58,6 +58,8 @@ def main():
         agent1 = load_zero_agent(version)
         agent2 = load_zero_agent(version)
     
+    agent1.encoder = ZeroEncoder()
+    agent2.encoder = ZeroEncoder()
     agent1.model.cuda()
     agent2.model.cuda()
     c1 = ZeroExperienceCollector()

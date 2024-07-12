@@ -3,7 +3,7 @@ import os, glob, random
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import SGD, AdamW
 from torch.utils.data import Dataset, DataLoader
 
 from dlgo.agent.base import Agent
@@ -143,9 +143,11 @@ class PolicyAgent(Agent):
         winning_test_loader = DataLoader(winning_test_dataset, batch_size=batch_size, shuffle=True)
         losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
 
-        optimizer = SGD(self._model.parameters(), lr=lr)
+        # optimizer = SGD(self._model.parameters(), lr=lr)
+        optimizer = AdamW(self._model.parameters(), lr=lr)
         winning_loss_fn = CELoss
         losing_loss_fn = InverseCELoss
+        policy_loss_fn = nn.CrossEntropyLoss()
         NUM_EPOCHES = 100
         self._model.cuda()
         total_steps = train_data_counts // batch_size * 8
@@ -160,7 +162,8 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = losing_loss_fn(y_, y.cuda())
+                # loss = losing_loss_fn(y_, y.cuda())
+                loss = policy_loss_fn((-1.0)*y_, y.cuda())
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
@@ -174,7 +177,8 @@ class PolicyAgent(Agent):
                 optimizer.zero_grad()
                 x = x.cuda()
                 y_ = self._model(x)
-                loss = winning_loss_fn(y_, y.cuda()) 
+                # loss = winning_loss_fn(y_, y.cuda()) 
+                loss = policy_loss_fn(y_, y.cuda()) 
                 loss.backward()
                 tot_loss += loss.item()
                 nn.utils.clip_grad_norm_(self._model.parameters(), clipnorm)
@@ -194,12 +198,14 @@ class PolicyAgent(Agent):
             x, y = next(iter(losing_test_loader))
             x = x.cuda()
             y_ = self._model(x)
-            loss = losing_loss_fn(y_, y.cuda()) 
+            # loss = losing_loss_fn(y_, y.cuda()) 
+            loss = policy_loss_fn((-1.0)*y_, y.cuda())
             eval_loss += loss.item()
             x, y = next(iter(winning_test_loader))
             x = x.cuda()
             y_ = self._model(x)
-            loss = winning_loss_fn(y_, y.cuda()) 
+            # loss = winning_loss_fn(y_, y.cuda()) 
+            loss = policy_loss_fn(y_, y.cuda()) 
             eval_loss += loss.item()
             eval_loss /= 2
             print("Epoch {}, Loss(val) : {}".format(epoch+1, eval_loss))
