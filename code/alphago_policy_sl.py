@@ -1,10 +1,11 @@
 from dlgo.data.parallel_processor import GoDataProcessor
+from dlgo.encoders.simple import SimpleEncoder
 from dlgo.encoders.alphago import AlphaGoEncoder
 from dlgo.networks.alphago import AlphaGoPolicyResNet
 
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import SGD, AdamW
 
 import os
 
@@ -32,19 +33,21 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 2000
+    num_games = 5500
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
-    NUM_EPOCHES = 100
+    NUM_EPOCHES = 200
     pre_trained = True
-    version = 7
+    version = 0
 
-    encoder = AlphaGoEncoder(use_player_plane=False)
+    # encoder = AlphaGoEncoder(use_player_plane=False)
+    encoder = SimpleEncoder(board_size=(rows, cols))
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2002'], use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2002'], use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2018_03', '2018_07', '2018_11', '2018_12'], use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2018_03', '2018_07', '2018_11', '2018_12'], use_generator=True)
 
-    alphago_sl_policy = AlphaGoPolicyResNet().cuda()
+    # alphago_sl_policy = AlphaGoPolicyResNet().cuda()
+    alphago_sl_policy = AlphaGoPolicyResNet(num_planes=11).cuda()
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")
@@ -55,7 +58,8 @@ def main():
 
     print(alphago_sl_policy)
 
-    optimizer = SGD(alphago_sl_policy.parameters(), lr=LEARNING_RATE)
+    # optimizer = SGD(alphago_sl_policy.parameters(), lr=LEARNING_RATE)
+    optimizer = AdamW(alphago_sl_policy.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss()
     
     total_steps = generator.get_num_samples() // BATCH_SIZE

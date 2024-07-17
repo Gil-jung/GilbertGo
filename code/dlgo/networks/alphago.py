@@ -207,6 +207,77 @@ class AlphaGoPolicyResNet(nn.Module):
         return 'alphagopolicyresnet'
 
 
+class AlphaGoPolicyMiniResNet(nn.Module):
+    def __init__(self, IMG_SIZE=19, num_planes=48):
+        super(AlphaGoPolicyMiniResNet, self).__init__()
+        self.img_size = IMG_SIZE
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels=num_planes, out_channels=128, kernel_size=5, padding=2, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True)
+        )
+
+        self.res1 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res2 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res3 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res4 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.policy_head = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=1, kernel_size=1, padding=0, bias=False),
+            # nn.Softmax2d()
+        )
+
+    def forward(self, x):
+        residual = self.conv1(x)
+        x = self.res1(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res2(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res3(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res4(residual)
+        x += residual
+        x = F.relu(x)
+        x = self.policy_head(x)
+        x = x.view(-1, self.img_size*self.img_size)
+        
+        return x
+    
+    def name(self):
+        return 'alphagopolicyminiresnet'
+
+
 class AlphaGoValueNet(nn.Module):
     def __init__(self, IMG_SIZE=19, num_planes=49):
         super(AlphaGoValueNet, self).__init__()
@@ -451,3 +522,92 @@ class AlphaGoValueResNet(nn.Module):
     
     def name(self):
         return 'alphagovalueresnet'
+    
+
+class AlphaGoValueMiniResNet(nn.Module):
+    def __init__(self, IMG_SIZE=19, num_planes=49):
+        super(AlphaGoValueMiniResNet, self).__init__()
+        self.img_size = IMG_SIZE
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels=num_planes, out_channels=128, kernel_size=5, padding=2, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True)
+        )
+
+        self.res1 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res2 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res3 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res4 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.res5 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.value_head1 = nn.Sequential(
+            nn.Linear(in_features=self.img_size*self.img_size, out_features=256),
+            nn.ReLU(inplace=True)
+        )
+
+        self.value_head2 = nn.Sequential(
+            nn.Linear(in_features=256, out_features=1),
+            nn.Tanh()
+        )
+
+
+    def forward(self, x):
+        residual = self.conv1(x)
+        x = self.res1(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res2(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res3(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res4(residual)
+        x += residual
+        residual = F.relu(x)
+        x = self.res5(residual)
+        x += residual
+        x = F.relu(x)
+        x = x.view(-1, self.img_size*self.img_size)
+        x = self.value_head1(x)
+        x = self.value_head2(x)
+        
+        return x
+    
+    def name(self):
+        return 'alphagovalueminiresnet'

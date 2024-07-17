@@ -1,7 +1,7 @@
 from dlgo.agent.pg import load_policy_agent
 from dlgo.encoders.alphago import AlphaGoEncoder
 from dlgo.networks.alphago import AlphaGoValueResNet
-from dlgo.rl.simulate import experience_simulation
+from dlgo.rl.simulate import experience_simulation, experience_simulation_large
 from dlgo.rl.value import ValueAgent
 from dlgo.rl.experience import ExperienceBuffer
 
@@ -13,19 +13,23 @@ def main():
     RL_version = 'v0'
     num_games = 128
 
-    alphago_rl_agent = load_policy_agent(type='SL', version=SL_version_1)
-    opponent = load_policy_agent(type='SL', version=SL_version_2)
-    alphago_rl_agent._model.cuda()
-    opponent._model.cuda()
+    # alphago_rl_agent = load_policy_agent(type='SL', version=SL_version_1)
+    # opponent = load_policy_agent(type='SL', version=SL_version_2)
+    # alphago_rl_agent._model.cuda()
+    # opponent._model.cuda()
 
-    encoder = AlphaGoEncoder(use_player_plane=True)
-    model = AlphaGoValueResNet()
-    value_agent1 = ValueAgent(model, encoder)
-    value_agent2 = ValueAgent(model, encoder)
-    
-    policy_exp_buffer, value_exp_buffer = experience_simulation(
-        num_games, alphago_rl_agent, opponent, value_agent1, value_agent2
+    # encoder = AlphaGoEncoder(use_player_plane=True)
+    # model = AlphaGoValueResNet()
+    # value_agent1 = ValueAgent(model, encoder)
+    # value_agent2 = ValueAgent(model, encoder)
+
+    policy_exp_buffer, value_exp_buffer = experience_simulation_large(
+        num_games
     )
+
+    # policy_exp_buffer, value_exp_buffer = experience_simulation(
+    #     num_games, alphago_rl_agent, opponent, value_agent1, value_agent2
+    # )
     
     winning_policy_states = policy_exp_buffer[0].states
     winning_policy_actions = policy_exp_buffer[0].actions

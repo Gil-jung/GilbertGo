@@ -5,6 +5,11 @@ from dlgo.gotypes import Player
 
 from collections import namedtuple
 
+from dlgo.agent.pg import load_policy_agent
+from dlgo.encoders.alphago import AlphaGoEncoder
+from dlgo.networks.alphago import AlphaGoValueResNet
+from dlgo.rl.value import ValueAgent
+
 
 class GameRecord(namedtuple('GameRecord', 'moves winner margin')):
     pass
@@ -81,6 +86,64 @@ def experience_simulation(num_games, agent1, agent2, agent3, agent4):
             collector4.complete_episode(reward=1)
             collector3.complete_episode(reward=-1)
         color1 = color1.other
+
+    policy_exp_buffer = rl.combine_experience([collector1, collector2])
+    value_exp_buffer = rl.combine_experience([collector3, collector4])
+    
+    return policy_exp_buffer, value_exp_buffer
+
+
+def experience_simulation_large(num_games):
+    SL_version_1 = 'v7'
+    SL_version_2_list = ['v7', 'v6', 'v5', 'v4', 'v3', 'v2', 'v1', 'v0']
+
+    collector1 = rl.ExperienceCollector()
+    collector2 = rl.ExperienceCollector()
+    collector3 = rl.ExperienceCollector()
+    collector4 = rl.ExperienceCollector()
+
+    for SL_version_2 in SL_version_2_list:
+
+        agent1 = load_policy_agent(type='SL', version=SL_version_1)
+        agent2 = load_policy_agent(type='SL', version=SL_version_2)
+        agent1._model.cuda()
+        agent2._model.cuda()
+
+        encoder = AlphaGoEncoder(use_player_plane=True)
+        model = AlphaGoValueResNet()
+        agent3 = ValueAgent(model, encoder)
+        agent4 = ValueAgent(model, encoder)
+
+        color1 = Player.black
+        for i in range(num_games):
+            print('Simulating game with %s : %d/%d...' % (SL_version_2, i + 1, num_games))
+            collector1.begin_episode()
+            agent1.set_collector(collector1)
+            collector2.begin_episode()
+            agent2.set_collector(collector2)
+            collector3.begin_episode()
+            agent3.set_collector(collector3)
+            collector4.begin_episode()
+            agent4.set_collector(collector4)
+
+            if color1 == Player.black:
+                # black_player, white_player = agent1, agent2
+                game_record = simulate_game(agent1, agent2, agent3, agent4)
+            else:
+                # white_player, black_player = agent1, agent2
+                game_record = simulate_game(agent2, agent1, agent4, agent3)
+            # game_record = simulate_game(black_player, white_player)
+            if game_record.winner == color1:
+                collector1.complete_episode(reward=1)
+                collector2.complete_episode(reward=-1)
+                collector3.complete_episode(reward=1)
+                collector4.complete_episode(reward=-1)
+            else:
+                collector2.complete_episode(reward=1)
+                collector1.complete_episode(reward=-1)
+                collector4.complete_episode(reward=1)
+                collector3.complete_episode(reward=-1)
+            color1 = color1.other
 
     policy_exp_buffer = rl.combine_experience([collector1, collector2])
     value_exp_buffer = rl.combine_experience([collector3, collector4])
