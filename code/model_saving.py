@@ -2,7 +2,7 @@ from dlgo.agent.pg import PolicyAgent
 from dlgo.rl.value import ValueAgent
 from dlgo.encoders.simple import SimpleEncoder
 from dlgo.encoders.alphago import AlphaGoEncoder
-from dlgo.networks.alphago import AlphaGoPolicyResNet, AlphaGoValueResNet
+from dlgo.networks.alphago import AlphaGoPolicyMiniResNet, AlphaGoValueResNet
 from dlgo.encoders.zero import ZeroEncoder
 from dlgo.networks.alphago_zero import AlphaGoZeroMiniNet
 from dlgo.zero.agent import ZeroAgent
@@ -12,15 +12,15 @@ import torch
 
 current_path = os.path.dirname(__file__)
 type = 'SL'
-version = 'v1'
-saving_epoch = 43
+version = 'm1'
+saving_epoch = 21
 
 ##############################################################################################################
 
 # encoder = AlphaGoEncoder(use_player_plane=False)
 encoder = SimpleEncoder(board_size=(19, 19))
 # model = AlphaGoPolicyResNet()
-model = AlphaGoPolicyResNet(num_planes=11)
+model = AlphaGoPolicyMiniResNet(num_planes=11)
 pt_flie = torch.load(current_path + f"\\checkpoints\\alphago_{type}_policy_epoch_{saving_epoch}_{version}.pt")
 model.load_state_dict(pt_flie['model_state_dict'])
 
