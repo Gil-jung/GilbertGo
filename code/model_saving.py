@@ -12,8 +12,8 @@ import torch
 
 current_path = os.path.dirname(__file__)
 type = 'SL'
-version = 'v0'
-saving_epoch = 25
+version = 'v1'
+saving_epoch = 43
 
 ##############################################################################################################
 

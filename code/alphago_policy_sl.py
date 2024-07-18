@@ -1,7 +1,7 @@
 from dlgo.data.parallel_processor import GoDataProcessor
 from dlgo.encoders.simple import SimpleEncoder
 from dlgo.encoders.alphago import AlphaGoEncoder
-from dlgo.networks.alphago import AlphaGoPolicyResNet
+from dlgo.networks.alphago import AlphaGoPolicyResNet, AlphaGoPolicyMiniResNet
 
 import torch
 import torch.nn as nn
@@ -33,7 +33,7 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 5500
+    num_games = 6500
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 200
@@ -43,16 +43,17 @@ def main():
     # encoder = AlphaGoEncoder(use_player_plane=False)
     encoder = SimpleEncoder(board_size=(rows, cols))
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2018_03', '2018_07', '2018_11', '2018_12'], use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2018_03', '2018_07', '2018_11', '2018_12'], use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2018_09', '2018_10', '2018_11', '2018_12'], use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2018_09', '2018_10', '2018_11', '2018_12'], use_generator=True)
 
     # alphago_sl_policy = AlphaGoPolicyResNet().cuda()
-    alphago_sl_policy = AlphaGoPolicyResNet(num_planes=11).cuda()
+    # alphago_sl_policy = AlphaGoPolicyResNet(num_planes=11).cuda()
+    alphago_sl_policy = AlphaGoPolicyMiniResNet(num_planes=11).cuda()
     if not pre_trained:
         alphago_sl_policy.apply(initialize_weights)
         print("initializing...")
     else:
-        pt_flie = torch.load(current_path + f"\\agents\\AlphaGo_Policy_SL_Agent_v{version}.pt")
+        pt_flie = torch.load(current_path + f"\\agents\\AlphaGo_Policy_SL_Agent_m{version}.pt")
         alphago_sl_policy.load_state_dict(pt_flie['model_state_dict'])
         print("model loading...")
 
@@ -102,7 +103,7 @@ def main():
         torch.save({
             'model_state_dict': alphago_sl_policy.state_dict(),
             'loss': loss,
-        }, current_path + f"\\checkpoints\\alphago_SL_policy_epoch_{epoch+1}_v{version+1}.pt")
+        }, current_path + f"\\checkpoints\\alphago_SL_policy_epoch_{epoch+1}_m{version+1}.pt")
 
 if __name__ == '__main__':
     main()
