@@ -567,12 +567,16 @@ class AlphaGoValueMiniResNet(nn.Module):
             nn.BatchNorm2d(num_features=128),
         )
 
-        self.res5 = nn.Sequential(
+        self.conv2 = nn.Sequential(
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_features=128),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(num_features=128),
+        )
+
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=1, kernel_size=1, padding=0, bias=False),
+            nn.BatchNorm2d(num_features=1),
+            nn.ReLU(inplace=True),
         )
 
         self.value_head1 = nn.Sequential(
@@ -600,9 +604,8 @@ class AlphaGoValueMiniResNet(nn.Module):
         x = self.res4(residual)
         x += residual
         residual = F.relu(x)
-        x = self.res5(residual)
-        x += residual
-        x = F.relu(x)
+        x = self.conv2(residual)
+        x = self.conv3(x)
         x = x.view(-1, self.img_size*self.img_size)
         x = self.value_head1(x)
         x = self.value_head2(x)

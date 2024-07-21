@@ -2,7 +2,7 @@ import os, glob, random
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import SGD, AdamW
 from torch.utils.data import Dataset, DataLoader
 
 from dlgo.encoders.alphago import AlphaGoEncoder
@@ -159,9 +159,10 @@ class ValueAgent(Agent):
         winning_test_loader = DataLoader(winning_test_dataset, batch_size=batch_size, shuffle=True)
         losing_test_loader = DataLoader(losing_test_dataset, batch_size=batch_size, shuffle=True)
 
-        optimizer = SGD(self.model.parameters(), lr=lr)
+        # optimizer = SGD(self.model.parameters(), lr=lr)
+        optimizer = AdamW(self.model.parameters(), lr=lr)
         loss_fn = nn.MSELoss()
-        NUM_EPOCHES = 100
+        NUM_EPOCHES = 200
         self.model.cuda()
         total_steps = train_data_counts // batch_size * 8
 

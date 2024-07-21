@@ -33,7 +33,7 @@ def main():
 
     rows, cols = 19, 19
     num_classes = rows * cols
-    num_games = 10000
+    num_games = 17000
     BATCH_SIZE = 128
     LEARNING_RATE = 0.001
     NUM_EPOCHES = 200
@@ -43,8 +43,8 @@ def main():
     # encoder = AlphaGoEncoder(use_player_plane=False)
     encoder = SimpleEncoder(board_size=(rows, cols))
     processor = GoDataProcessor(encoder=encoder.name())
-    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2006'], use_generator=True)
-    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2006'], use_generator=True)
+    generator = processor.load_go_data(data_type='train', num_samples=num_games, cap_year=['2016_09', '2016_10', '2016_11', '2016_12', '2017_01', '2017_02', '2017_03', '2017_04', '2017_05', '2017_06', '2017_07', '2017_08', '2017_09', '2017_10', '2017_11', '2017_12'], use_generator=True)
+    test_generator = processor.load_go_data(data_type='test', num_samples=num_games, cap_year=['2016_09', '2016_10', '2016_11', '2016_12', '2017_01', '2017_02', '2017_03', '2017_04', '2017_05', '2017_06', '2017_07', '2017_08', '2017_09', '2017_10', '2017_11', '2017_12'], use_generator=True)
 
     # alphago_sl_policy = AlphaGoPolicyResNet().cuda()
     # alphago_sl_policy = AlphaGoPolicyResNet(num_planes=11).cuda()
