@@ -7,17 +7,17 @@ from dlgo.rl.experience import ExperienceBuffer
 import os, sys, multiprocessing
 import torch
 import torch.nn as nn
-import ray
 
+chunk = 0
 
-# @ray.remote
 def exp_file_generation(value_exp_buffer):
+    global chunk
     winning_value_states = value_exp_buffer[0].states
     winning_value_rewards = value_exp_buffer[0].rewards
     losing_value_states = value_exp_buffer[1].states
     losing_value_rewards = value_exp_buffer[1].rewards
     
-    chunk = 0
+    # chunk = 0
     chunk_size = 1024
     while len(winning_value_rewards) >= chunk_size:
         current_winning_value_states, winning_value_states = winning_value_states[:chunk_size], winning_value_states[chunk_size:]
@@ -55,8 +55,8 @@ def exp_file_generation(value_exp_buffer):
 
 
 def main():
-    self_play_mode = False
-    training_mode = True
+    self_play_mode = True
+    training_mode = False
     if self_play_mode:
         cores = multiprocessing.cpu_count()
         value_exp_buffers = []
@@ -74,7 +74,7 @@ def main():
         with multiprocessing.Pool(processes=cores) as p:
             result = p.map_async(exp_file_generation, value_exp_buffers)
             try:
-                _ = result.get()
+                _ = result.wait()
             except KeyboardInterrupt:  # Caught keyboard interrupt, terminating workers
                 p.terminate()
                 p.join()

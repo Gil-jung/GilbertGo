@@ -18,7 +18,7 @@ def self_play(num_games=128, agent1='m2', agent2=['m2', 'm1', 'm0']):
     losing_value_rewards = value_exp_buffer[1].rewards
     
     chunk = 0
-    chunk_size = 1024
+    chunk_size = 4096
     while len(winning_value_rewards) >= chunk_size:
         current_winning_value_states, winning_value_states = winning_value_states[:chunk_size], winning_value_states[chunk_size:]
         current_winning_value_rewards, winning_value_rewards = winning_value_rewards[:chunk_size], winning_value_rewards[chunk_size:]
@@ -55,10 +55,10 @@ def self_play(num_games=128, agent1='m2', agent2=['m2', 'm1', 'm0']):
 
 
 def main():
-    self_play_mode = True
-    training_mode = False
+    self_play_mode = False
+    training_mode = True
     if self_play_mode:
-        self_play(num_games=290, agent1='m2', agent2=['m2', 'm1', 'm0'])
+        self_play(num_games=1000, agent1='m2', agent2=['m2'])
 
     if training_mode:
         path = os.path.dirname(__file__)

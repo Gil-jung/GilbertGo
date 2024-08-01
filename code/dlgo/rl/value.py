@@ -29,8 +29,8 @@ class ValueDataSet(Dataset):
         return self.length
     
     def __getitem__(self, idx):
-        div = idx // 1024
-        mod = idx % 1024
+        div = idx // 4096
+        mod = idx % 4096
 
         X = torch.tensor(self.experiencebuffers[div].states[mod], dtype=torch.float32)
         y = torch.tensor(self.experiencebuffers[div].rewards[mod], dtype=torch.float32)
@@ -127,7 +127,8 @@ class ValueAgent(Agent):
         version = 0
         base = path + f"\\buffers\\winning_experiences_value_*.pt"
         files_num = len(glob.glob(base))
-        pivot = int(files_num * 0.8)
+        # pivot = int(files_num * 0.8)
+        pivot = 54
 
         winning_train_buffers = []
         losing_train_buffers = []
@@ -149,10 +150,10 @@ class ValueAgent(Agent):
                 experience_buffer = load_experience(result="losing", type="value", no=f'{idx}')
                 losing_test_buffers.append(experience_buffer)
 
-        winning_train_dataset = ValueDataSet(winning_train_buffers, transform=trans_board)
-        losing_train_dataset = ValueDataSet(losing_train_buffers, transform=trans_board)
-        winning_test_dataset = ValueDataSet(winning_test_buffers, transform=trans_board)
-        losing_test_dataset = ValueDataSet(losing_test_buffers, transform=trans_board)
+        winning_train_dataset = ValueDataSet(winning_train_buffers)
+        losing_train_dataset = ValueDataSet(losing_train_buffers)
+        winning_test_dataset = ValueDataSet(winning_test_buffers)
+        losing_test_dataset = ValueDataSet(losing_test_buffers)
 
         winning_train_loader = DataLoader(winning_train_dataset, batch_size=batch_size, shuffle=True)
         losing_train_loader = DataLoader(losing_train_dataset, batch_size=batch_size, shuffle=True)
@@ -164,7 +165,7 @@ class ValueAgent(Agent):
         loss_fn = nn.MSELoss()
         NUM_EPOCHES = 200
         self.model.cuda()
-        total_steps = train_data_counts // batch_size * 8
+        total_steps = train_data_counts // batch_size
 
         for epoch in range(NUM_EPOCHES):
             self.model.train()
@@ -228,7 +229,7 @@ class ValueAgent(Agent):
             torch.save({
                 'model_state_dict': self.model.state_dict(),
                 'loss': eval_loss,
-            }, path + f"\\checkpoints\\alphago_RL_value_epoch_{epoch+1}_v{version}.pt")
+            }, path + f"\\checkpoints\\alphago_RL_value_epoch_{epoch+1}_m{version}.pt")
 
         self.model.cpu()
     
